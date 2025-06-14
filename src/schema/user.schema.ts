@@ -1,0 +1,41 @@
+import { z } from "zod";
+
+export const RegisterUserSchema = z.object({
+  email: z.string().email("Invalid email format").trim(),
+  password: z
+    .string()
+    .min(6, "Password must be at least 6 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(
+      /[^A-Za-z0-9]/,
+      "Password must contain at least one special character"
+    )
+    .nonempty("Password is required"),
+});
+
+export const RegisterAdminCompanySchema = z.object({
+  email: z.string().email("Invalid email format").trim(),
+  password: z
+    .string()
+    .min(6, "Password must be at least 6 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(
+      /[^A-Za-z0-9]/,
+      "Password must contain at least one special character"
+    )
+    .nonempty("Password is required"),
+  companyName: z.string().min(2, "Company name is required").trim(),
+  phone: z
+    .string()
+    .min(6, "Phone number is required")
+    .max(20)
+    .regex(/^[\d\s()+-]+$/, "Phone number format is invalid")
+    .trim(),
+});
+
+export const LoginSchema = z.object({
+  email: z.string().email("invalid email format").trim(),
+  password: z.string().min(1, "Password is required"),
+});

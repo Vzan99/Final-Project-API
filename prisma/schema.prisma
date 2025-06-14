@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id         String   @id @default(uuid())
+  name       String
+  email      String   @unique
+  password   String?
+  role       Role     @default(USER)
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  // Relations
+  profile            Profile?
+  applications       Application[]
+  subscriptions      Subscription[]
+  assessments        UserAssessment[]
+  reviews            CompanyReview[]
+  certificates       Certificate[]
+  assessmentsCreated SkillAssessment[]   @relation("AssessmentDeveloper")
+  Company            Company?
+  InterviewSchedule  InterviewSchedule[]
+}
+
+model Profile {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @unique
+  birthDate DateTime
+  gender    String
+  education String
+  address   String
+  photoUrl  String?
+}
+
+model Company {
+  id          String  @id @default(uuid())
+  name        String
+  email       String  @unique
+  phone       String
+  description String
+  location    String
+  logo        String?
+
+  admin   User   @relation(fields: [adminId], references: [id])
+  adminId String @unique
+
+  jobs    Job[]
+  reviews CompanyReview[]
+}
+
+model Job {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  category    String
+  location    String
+  salary      Int?
+  status      String
+  deadline    DateTime
+
+  company   Company @relation(fields: [companyId], references: [id])
+  companyId String
+
+  applications Application[]
+  interviews   InterviewSchedule[]
+}
+
+model Application {
+  id             String   @id @default(uuid())
+  expectedSalary Int
+  status         String
+  cvFile         String
+  createdAt      DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  job   Job    @relation(fields: [jobId], references: [id])
+  jobId String
+}
+
+model InterviewSchedule {
+  id       String   @id @default(uuid())
+  dateTime DateTime
+
+  job   Job    @relation(fields: [jobId], references: [id])
+  jobId String
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+}
+
+model Subscription {
+  id            String           @id @default(uuid())
+  type          SubscriptionType
+  startDate     DateTime
+  endDate       DateTime
+  paymentStatus String
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+}
+
+model SkillAssessment {
+  id        String @id @default(uuid())
+  name      String
+  questions Json
+
+  developer   User   @relation("AssessmentDeveloper", fields: [developerId], references: [id])
+  developerId String
+
+  userAssessments UserAssessment[]
+  Certificate     Certificate[]
+}
+
+model UserAssessment {
+  id        String   @id @default(uuid())
+  score     Int
+  passed    Boolean
+  badge     String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  assessment   SkillAssessment @relation(fields: [assessmentId], references: [id])
+  assessmentId String
+}
+
+model CompanyReview {
+  id             String @id @default(uuid())
+  rating         Int
+  salaryEstimate Int
+  content        String
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  company   Company @relation(fields: [companyId], references: [id])
+  companyId String
+}
+
+model Certificate {
+  id               String @id @default(uuid())
+  certificateUrl   String
+  verificationCode String
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  assessment   SkillAssessment @relation(fields: [assessmentId], references: [id])
+  assessmentId String
+}
+
+enum Role {
+  USER
+  ADMIN
+  DEVELOPER
+}
+
+enum SubscriptionType {
+  STANDARD
+  PROFESSIONAL
+}
