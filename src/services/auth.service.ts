@@ -37,7 +37,7 @@ async function RegisterUserService(param: IRegisterUserParam) {
   }
 }
 
-async function RegisterAdminCompanyService(param: IRegisterAdminParam) {
+async function RegisterAdminService(param: IRegisterAdminParam) {
   try {
     const isEmailExist = await findUserByEmail(param.email);
     if (isEmailExist) throw new Error("Email is already exist");
@@ -51,13 +51,13 @@ async function RegisterAdminCompanyService(param: IRegisterAdminParam) {
           password: hashedPassword,
           role: Role.ADMIN,
           isVerified: false,
-          name: param.companyName,
+          name: param.name,
         },
       });
 
       const company = await tx.company.create({
         data: {
-          name: param.companyName,
+          name: param.name,
           email: param.email,
           phone: param.phone,
           adminId: user.id,
@@ -107,4 +107,4 @@ async function LoginService(param: ILoginParam) {
   }
 }
 
-export { RegisterUserService, RegisterAdminCompanyService, LoginService };
+export { RegisterUserService, RegisterAdminService, LoginService };

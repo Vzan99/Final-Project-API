@@ -1,4 +1,5 @@
 import express, { Application } from "express";
+import cors from "cors";
 import { FE_URL, PORT } from "./config";
 
 import AuthRouter from "./routers/auth.router";
@@ -6,7 +7,13 @@ import AuthRouter from "./routers/auth.router";
 const port = PORT || 8000;
 const app: Application = express();
 
-//Middleware
+app.use(
+  cors({
+    origin: FE_URL,
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 app.use("/auth", AuthRouter);

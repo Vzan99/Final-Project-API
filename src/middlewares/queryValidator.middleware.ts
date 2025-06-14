@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import { AnyZodObject, ZodError } from "zod";
 
-export default function ReqValidator(schema: AnyZodObject) {
-  return (req: Request, res: Response, next: NextFunction) => {
+export default function QueryValidator(schema: AnyZodObject) {
+  return (req: Request, res: Response, next: NextFunction): void => {
     try {
-      req.body = schema.parse(req.body);
+      req.query = schema.parse(req.query);
       next();
     } catch (err) {
       if (err instanceof ZodError) {
@@ -13,7 +13,7 @@ export default function ReqValidator(schema: AnyZodObject) {
           message: e.message,
         }));
 
-        console.error("Zod validation error:", details);
+        console.error("Zod validation error (query):", details);
         res.status(422).json({ message: "Validation failed", details });
         return;
       }

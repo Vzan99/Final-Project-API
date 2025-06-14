@@ -1,15 +1,16 @@
 import { Router } from "express";
 import {
   RegisterUserController,
-  RegisterAdminCompanyController,
+  RegisterAdminController,
   LoginController,
 } from "../controllers/auth.controller";
-import ReqValidator from "../middlewares/reqValidator.middleware";
 import {
   LoginSchema,
-  RegisterAdminCompanySchema,
+  RegisterAdminSchema,
   RegisterUserSchema,
 } from "../schema/user.schema";
+import ReqValidator from "../middlewares/reqValidator.middleware";
+import { GoogleLoginController } from "../controllers/auth.controller";
 
 const router = Router();
 
@@ -21,10 +22,12 @@ router.post(
 
 router.post(
   "/register/admin",
-  ReqValidator(RegisterAdminCompanySchema),
-  RegisterAdminCompanyController
+  ReqValidator(RegisterAdminSchema),
+  RegisterAdminController
 );
 
 router.post("/login", ReqValidator(LoginSchema), LoginController);
+
+router.post("/login/google", GoogleLoginController);
 
 export default router;

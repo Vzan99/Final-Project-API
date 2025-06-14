@@ -2,8 +2,9 @@ import { Request, Response, NextFunction } from "express";
 import {
   RegisterUserService,
   LoginService,
-  RegisterAdminCompanyService,
+  RegisterAdminService,
 } from "../services/auth.service";
+import { loginWithGoogle } from "../services/googleAuth.service";
 
 async function RegisterUserController(
   req: Request,
@@ -35,22 +36,22 @@ async function RegisterUserController(
   }
 }
 
-async function RegisterAdminCompanyController(
+async function RegisterAdminController(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
-  const { email, password, companyName, phone } = req.body;
+  const { email, password, name, phone } = req.body;
 
-  if (!email || !password || !companyName || !phone) {
+  if (!email || !password || !name || !phone) {
     return next(new Error("Missing required fields"));
   }
 
   try {
-    const { user, company } = await RegisterAdminCompanyService({
+    const { user, company } = await RegisterAdminService({
       email,
       password,
-      companyName,
+      name,
       phone,
     });
 
@@ -97,8 +98,20 @@ async function LoginController(
   }
 }
 
-export {
-  RegisterUserController,
-  RegisterAdminCompanyController,
-  LoginController,
-};
+export async function GoogleLoginController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { idToken } = req.body;
+    const user = await loginWithGoogle(idToken);
+
+    // You can issue a JWT or session here
+    res.json({ message: "Login successful", user });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export { RegisterUserController, RegisterAdminController, LoginController };
