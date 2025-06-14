@@ -9,156 +9,255 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(uuid())
-  name       String
-  email      String   @unique
-  password   String?
-  role       Role     @default(USER)
-  isVerified Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id                  String             @id @default(uuid())
+  name                String
+  email               String             @unique
+  password            String?
+  role                Role               @default(USER)
+  isVerified          Boolean            @default(false)
+  createdAt           DateTime           @default(now())
+  lastLogin           DateTime?
+  resetToken          String?
+  resetTokenExpiry    DateTime?
+  socialLoginProvider String?
 
   // Relations
-  profile            Profile?
-  applications       Application[]
-  subscriptions      Subscription[]
-  assessments        UserAssessment[]
-  reviews            CompanyReview[]
-  certificates       Certificate[]
-  assessmentsCreated SkillAssessment[]   @relation("AssessmentDeveloper")
-  Company            Company?
-  InterviewSchedule  InterviewSchedule[]
+  profile             Profile?
+  company             Company?
+  applications        Application[]
+  subscriptions       Subscription[]
+  assessments         UserAssessment[]
+  reviews             CompanyReview[]
+  certificates        Certificate[]
+  assessmentsCreated  SkillAssessment[]  @relation("AssessmentDeveloper")
+  interviewSchedules  InterviewSchedule[]
+  savedJobs           SavedJob[]
+  preSelectionAnswers PreSelectionAnswer[]
 }
 
 model Profile {
   id        String   @id @default(uuid())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String   @unique
   birthDate DateTime
   gender    String
   education String
   address   String
   photoUrl  String?
+  resumeUrl String?
+  skills    String[]
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @unique
 }
 
 model Company {
-  id          String  @id @default(uuid())
+  id          String   @id @default(uuid())
   name        String
-  email       String  @unique
+  email       String   @unique
   phone       String
   description String
   location    String
   logo        String?
+  website     String?
+  industry    String?
+  foundedYear Int?
 
-  admin   User   @relation(fields: [adminId], references: [id])
-  adminId String @unique
+  // Relations
+  admin       User     @relation(fields: [adminId], references: [id])
+  adminId     String   @unique
+  jobs        Job[]
+  reviews     CompanyReview[]
+}
 
-  jobs    Job[]
-  reviews CompanyReview[]
+model Category {
+  id    String @id @default(uuid())
+  name  String @unique
+  
+  // Relations
+  jobs  Job[]
 }
 
 model Job {
-  id          String   @id @default(uuid())
-  title       String
-  description String
-  category    String
-  location    String
-  salary      Int?
-  status      String
-  deadline    DateTime
-
-  company   Company @relation(fields: [companyId], references: [id])
-  companyId String
-
-  applications Application[]
-  interviews   InterviewSchedule[]
+  id               String              @id @default(uuid())
+  title            String
+  description      String
+  location         String
+  salary           Int?
+  status           JobStatus           @default(DRAFT)
+  deadline         DateTime
+  isRemote         Boolean             @default(false)
+  experienceLevel  String
+  jobType          String
+  tags             String[]
+  bannerUrl        String?
+  hasTest          Boolean             @default(false)
+  
+  // Relations
+  company          Company             @relation(fields: [companyId], references: [id])
+  companyId        String
+  category         Category            @relation(fields: [categoryId], references: [id])
+  categoryId       String
+  applications     Application[]
+  interviews       InterviewSchedule[]
+  savedBy          SavedJob[]
+  preSelectionTest PreSelectionTest?
 }
 
 model Application {
-  id             String   @id @default(uuid())
+  id             String              @id @default(uuid())
   expectedSalary Int
-  status         String
+  status         ApplicationStatus   @default(PENDING)
   cvFile         String
-  createdAt      DateTime @default(now())
+  coverLetter    String?
+  createdAt      DateTime            @default(now())
+  testScore      Int?
+  feedback       String?
 
-  user   User   @relation(fields: [userId], references: [id])
-  userId String
-
-  job   Job    @relation(fields: [jobId], references: [id])
-  jobId String
+  // Relations
+  user           User                @relation(fields: [userId], references: [id])
+  userId         String
+  job            Job                 @relation(fields: [jobId], references: [id])
+  jobId          String
 }
 
 model InterviewSchedule {
-  id       String   @id @default(uuid())
-  dateTime DateTime
+  id           String           @id @default(uuid())
+  dateTime     DateTime
+  location     String?
+  notes        String?
+  status       InterviewStatus @default(SCHEDULED)
+  reminderSent Boolean         @default(false)
 
-  job   Job    @relation(fields: [jobId], references: [id])
-  jobId String
-
-  user   User   @relation(fields: [userId], references: [id])
-  userId String
+  // Relations
+  job          Job             @relation(fields: [jobId], references: [id])
+  jobId        String
+  user         User            @relation(fields: [userId], references: [id])
+  userId       String
 }
 
 model Subscription {
-  id            String           @id @default(uuid())
+  id            String         @id @default(uuid())
   type          SubscriptionType
   startDate     DateTime
   endDate       DateTime
-  paymentStatus String
+  paymentStatus PaymentStatus @default(PENDING)
+  paymentMethod String?
+  paymentProof  String?
+  amount        Float
 
-  user   User   @relation(fields: [userId], references: [id])
-  userId String
+  // Relations
+  user          User          @relation(fields: [userId], references: [id])
+  userId        String
 }
 
 model SkillAssessment {
-  id        String @id @default(uuid())
-  name      String
-  questions Json
+  id              String           @id @default(uuid())
+  name            String
+  description     String?
+  questions       Json
+  passingScore    Int              @default(75)
+  timeLimit       Int              @default(30)
+  badgeImage      String?
+  isActive        Boolean          @default(true)
 
-  developer   User   @relation("AssessmentDeveloper", fields: [developerId], references: [id])
-  developerId String
-
+  // Relations
+  developer       User             @relation("AssessmentDeveloper", fields: [developerId], references: [id])
+  developerId     String
   userAssessments UserAssessment[]
-  Certificate     Certificate[]
+  certificates    Certificate[]
 }
 
 model UserAssessment {
-  id        String   @id @default(uuid())
-  score     Int
-  passed    Boolean
-  badge     String
-  createdAt DateTime @default(now())
+  id             String   @id @default(uuid())
+  score          Int
+  passed         Boolean
+  badge          String
+  createdAt      DateTime @default(now())
+  timeTaken      Int?
+  answers        Json?
 
-  user   User   @relation(fields: [userId], references: [id])
-  userId String
-
-  assessment   SkillAssessment @relation(fields: [assessmentId], references: [id])
-  assessmentId String
+  // Relations
+  user           User             @relation(fields: [userId], references: [id])
+  userId         String
+  assessment     SkillAssessment  @relation(fields: [assessmentId], references: [id])
+  assessmentId   String
 }
 
 model CompanyReview {
-  id             String @id @default(uuid())
+  id             String   @id @default(uuid())
   rating         Int
   salaryEstimate Int
   content        String
+  position       String
+  isAnonymous    Boolean   @default(true)
+  cultureRating  Int?
+  workLifeRating Int?
+  careerRating   Int?
+  isVerified     Boolean   @default(false)
 
-  user   User   @relation(fields: [userId], references: [id])
-  userId String
-
-  company   Company @relation(fields: [companyId], references: [id])
-  companyId String
+  // Relations
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String
+  company        Company  @relation(fields: [companyId], references: [id])
+  companyId      String
 }
 
 model Certificate {
-  id               String @id @default(uuid())
+  id               String   @id @default(uuid())
   certificateUrl   String
   verificationCode String
+  issuedAt         DateTime @default(now())
+  expiresAt        DateTime?
+  qrCodeUrl        String?
 
-  user   User   @relation(fields: [userId], references: [id])
-  userId String
-
-  assessment   SkillAssessment @relation(fields: [assessmentId], references: [id])
-  assessmentId String
+  // Relations
+  user             User             @relation(fields: [userId], references: [id])
+  userId         String
+  assessment       SkillAssessment  @relation(fields: [assessmentId], references: [id])
+  assessmentId     String
 }
+
+model SavedJob {
+  id        String   @id @default(uuid())
+  savedAt   DateTime @default(now())
+  
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  job       Job      @relation(fields: [jobId], references: [id])
+  jobId     String
+
+  @@unique([userId, jobId])
+}
+
+model PreSelectionTest {
+  id        String   @id @default(uuid())
+  questions Json
+  createdAt DateTime @default(now())
+
+  // Relations
+  job       Job      @relation(fields: [jobId], references: [id])
+  jobId     String   @unique
+  answers   PreSelectionAnswer[]
+}
+
+model PreSelectionAnswer {
+  id        String   @id @default(uuid())
+  score     Int
+  passed    Boolean
+  answers   Json
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  test      PreSelectionTest @relation(fields: [testId], references: [id])
+  testId    String
+
+  @@unique([userId, testId])
+}
+
+// Enums
 
 enum Role {
   USER
@@ -169,4 +268,33 @@ enum Role {
 enum SubscriptionType {
   STANDARD
   PROFESSIONAL
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+}
+
+enum JobStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWED
+  INTERVIEW
+  ACCEPTED
+  REJECTED
+}
+
+enum InterviewStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
 }

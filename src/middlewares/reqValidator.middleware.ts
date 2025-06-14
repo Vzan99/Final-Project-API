@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
-import { ZodTypeAny, ZodError } from "zod";
+import { AnyZodObject, ZodError } from "zod";
 
-export default function ReqValidator(schema: ZodTypeAny) {
+export default function ReqValidator(schema: AnyZodObject) {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
       req.body = schema.parse(req.body);

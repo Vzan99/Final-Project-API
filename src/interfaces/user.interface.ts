@@ -3,7 +3,7 @@ export interface IRegisterUserParam {
   password: string;
 }
 
-export interface IRegisterAdminCompanyParam {
+export interface IRegisterAdminParam {
   email: string;
   password: string;
   companyName: string;

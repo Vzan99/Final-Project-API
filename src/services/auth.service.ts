@@ -1,6 +1,6 @@
 import {
   IRegisterUserParam,
-  IRegisterAdminCompanyParam,
+  IRegisterAdminParam,
   ILoginParam,
 } from "../interfaces/user.interface";
 import prisma from "../lib/prisma";
@@ -37,7 +37,7 @@ async function RegisterUserService(param: IRegisterUserParam) {
   }
 }
 
-async function RegisterAdminCompanyService(param: IRegisterAdminCompanyParam) {
+async function RegisterAdminCompanyService(param: IRegisterAdminParam) {
   try {
     const isEmailExist = await findUserByEmail(param.email);
     if (isEmailExist) throw new Error("Email is already exist");
