@@ -74,6 +74,9 @@ async function RegisterAdminController(
   }
 }
 
+const isProd = process.env.NODE_ENV === "production";
+
+// --- LOGIN CONTROLLER ---
 async function LoginController(
   req: Request,
   res: Response,
@@ -88,11 +91,42 @@ async function LoginController(
   try {
     const { user, token } = await LoginService({ email, password });
 
-    res.status(200).cookie("access_token", token).send({
-      message: "Login successful",
-      user: user,
-      token,
+    res
+      .status(200)
+      .cookie("access_token", token, {
+        httpOnly: true,
+        secure: isProd, // true in prod, false in dev
+        sameSite: isProd ? "none" : "lax", // 'none' requires HTTPS, 'lax' works for dev
+        path: "/", // must match logout
+        maxAge: 24 * 60 * 60 * 1000, // 1 day
+      })
+      .json({
+        message: "Login successful",
+        user,
+        token,
+      });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// --- LOGOUT CONTROLLER ---
+export async function LogoutController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    console.log("Clearing access_token cookie...");
+
+    res.clearCookie("access_token", {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
+      path: "/", // must match how it was set
     });
+
+    res.status(200).json({ message: "Logout successful" });
   } catch (err) {
     next(err);
   }
