@@ -14,7 +14,7 @@ export const RegisterUserSchema = z.object({
     .nonempty("Password is required"),
 });
 
-export const RegisterAdminCompanySchema = z.object({
+export const RegisterAdminSchema = z.object({
   email: z.string().email("Invalid email format").trim(),
   password: z
     .string()
@@ -26,7 +26,7 @@ export const RegisterAdminCompanySchema = z.object({
       "Password must contain at least one special character"
     )
     .nonempty("Password is required"),
-  companyName: z.string().min(2, "Company name is required").trim(),
+  name: z.string().min(2, "Company name is required").trim(),
   phone: z
     .string()
     .min(6, "Phone number is required")

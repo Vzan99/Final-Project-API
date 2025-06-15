@@ -6,7 +6,7 @@ export interface IRegisterUserParam {
 export interface IRegisterAdminParam {
   email: string;
   password: string;
-  companyName: string;
+  name: string;
   phone: string;
 }
 
