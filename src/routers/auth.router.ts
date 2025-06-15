@@ -3,6 +3,7 @@ import {
   RegisterUserController,
   RegisterAdminController,
   LoginController,
+  LogoutController,
 } from "../controllers/auth.controller";
 import {
   LoginSchema,
@@ -27,6 +28,8 @@ router.post(
 );
 
 router.post("/login", ReqValidator(LoginSchema), LoginController);
+
+router.post("/logout", LogoutController);
 
 router.post("/login/google", GoogleLoginController);
 

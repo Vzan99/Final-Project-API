@@ -6,13 +6,19 @@ import { IUserReqParam } from "../types/express";
 
 async function VerifyToken(req: Request, res: Response, next: NextFunction) {
   try {
-    const token = req.header("Authorization")?.replace("Bearer ", "");
+    // Check both the Authorization header and cookie
+    const authHeader = req.header("Authorization");
+    const cookieToken = req.cookies?.access_token;
 
-    if (!token) throw new Error("Unauthorized");
+    // Extract token from header or cookie
+    const token =
+      (authHeader?.startsWith("Bearer ") && authHeader.split(" ")[1]) ||
+      cookieToken;
+
+    if (!token) throw new Error("Unauthorized: Token missing");
 
     const verifyUser = verify(token, String(SECRET_KEY));
-
-    if (!verifyUser) throw new Error("Invalid Token");
+    if (!verifyUser) throw new Error("Invalid token");
 
     req.user = verifyUser as IUserReqParam;
 
