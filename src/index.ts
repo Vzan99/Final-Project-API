@@ -5,6 +5,9 @@ import cookieParser from "cookie-parser";
 
 import AuthRouter from "./routers/auth.router";
 import ProfileRouter from "./routers/profile.router";
+import PreTestRouter from "./routers/preTest.router";
+import JobRouter from "./routers/job.router";
+
 
 const port = PORT || 8000;
 const app: Application = express();
@@ -20,6 +23,8 @@ app.use(express.json());
 app.use(cookieParser());
 
 app.use("/auth", AuthRouter);
+app.use("/pre-selection-tests", PreTestRouter);
+app.use("/jobs", JobRouter);
 
 app.use("/profile", ProfileRouter);
 

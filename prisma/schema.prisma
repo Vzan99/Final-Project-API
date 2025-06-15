@@ -91,6 +91,7 @@ model Job {
   tags             String[]
   bannerUrl        String?
   hasTest          Boolean             @default(false)
+  createdAt        DateTime            @default(now())
   
   // Relations
   company          Company             @relation(fields: [companyId], references: [id])
