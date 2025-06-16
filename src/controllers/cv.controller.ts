@@ -4,17 +4,14 @@ import PDFDocument from "pdfkit";
 
 export const getCVFormData = async (req: Request, res: Response) => {
   const userId = req.user?.id;
-
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { profile: true },
   });
-
   if (!user || !user.profile) {
     res.status(404).json({ message: "User profile not found" });
     return;
   }
-
   res.json({
     name: user.name,
     email: user.email,
@@ -40,7 +37,7 @@ export const generateCV = async (req: Request, res: Response) => {
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", "attachment; filename=cv.pdf");
 
-  doc.pipe(res); // ⬅️ Pipe dulu sebelum isi konten
+  doc.pipe(res); // Pipe dulu sebelum isi konten
 
   doc.fontSize(20).text(user.name);
   doc.fontSize(12).text(user.email);
