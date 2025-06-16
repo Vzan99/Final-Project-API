@@ -6,20 +6,34 @@ import {
   PublishJobInput,
 } from "../schema/job.schema";
 
-export async function createJob(data: CreateJobInput, adminId: string) {
+export async function createJob(adminId: string, data: CreateJobInput) {
   const company = await prisma.company.findUnique({
     where: { adminId },
   });
 
-  if (!company) {
-    throw new Error("Company not found for this admin.");
+  if (!company) throw new Error("Company not found");
+
+  // Pisahkan "category" dari data lainnya
+  const { category, deadline, ...rest } = data;
+
+  // Cek atau buat kategori berdasarkan nama
+  let categoryRecord = await prisma.category.findUnique({
+    where: { name: category },
+  });
+
+  if (!categoryRecord) {
+    categoryRecord = await prisma.category.create({
+      data: { name: category },
+    });
   }
 
+  // Buat job baru
   const job = await prisma.job.create({
     data: {
-      ...data,
+      ...rest,
       companyId: company.id,
-      status: "DRAFT", // default status
+      categoryId: categoryRecord.id,
+      deadline: new Date(deadline),
     },
   });
 
@@ -140,9 +154,31 @@ export async function updateJobById(
     throw new Error("Job not found or access denied");
   }
 
+  const { category, deadline, ...rest } = data;
+
+  let categoryId: string | undefined = undefined;
+
+  if (category) {
+    const existing = await prisma.category.findUnique({
+      where: { name: category },
+    });
+
+    const categoryRecord =
+      existing ??
+      (await prisma.category.create({
+        data: { name: category },
+      }));
+
+    categoryId = categoryRecord.id;
+  }
+
   const updated = await prisma.job.update({
     where: { id: jobId },
-    data,
+    data: {
+      ...rest,
+      ...(categoryId && { categoryId }), // hanya tambahkan jika ada
+      ...(deadline && { deadline: new Date(deadline) }),
+    },
   });
 
   return updated;

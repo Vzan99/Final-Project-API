@@ -10,6 +10,8 @@ import JobRouter from "./routers/job.router";
 import subscriptionRouter from "./routers/subscription.router";
 import { initSubscriptionCron } from "./lib/subscriptionCron";
 import cvRouter from "./routers/cv.router";
+import ApplicationRouter from "./routers/application.router";
+import InterviewRouter from "./routers/interview.router";
 
 const port = PORT || 8000;
 const app: Application = express();
@@ -32,6 +34,8 @@ app.use("/profile", ProfileRouter);
 
 app.use("/subscriptions", subscriptionRouter);
 app.use("/user", cvRouter);
+app.use("/applications", ApplicationRouter);
+app.use("/interviews", InterviewRouter);
 
 app.listen(port, () => {
   console.log(`Server started on port ${port}`);

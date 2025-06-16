@@ -17,7 +17,7 @@ export async function createJobHandler(
     const adminId = req.user!.id;
     const data = req.body;
 
-    const job = await createJob(data, adminId);
+    const job = await createJob(adminId, data);
 
     res.status(201).json({
       success: true,
@@ -103,7 +103,7 @@ export async function updateJobHandler(
 
     const updated = await updateJobById(jobId, adminId, data);
 
-    res.json({
+    res.status(200).json({
       success: true,
       message: "Job updated successfully",
       data: updated,
