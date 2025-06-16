@@ -37,9 +37,18 @@ async function AdminGuard(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+const developerGuard = (req: Request, res: Response, next: NextFunction) => {
+  if (req.user?.role !== "DEVELOPER") {
+    return res
+      .status(403)
+      .json({ message: "Access restricted: Developer only" });
+  }
+  next();
+};
+
 // async function UserGuard
 // async function DeveloperGuard
 // async function VerifyBadge
 // async function VerifiedCheck
 
-export { VerifyToken, AdminGuard };
+export { VerifyToken, AdminGuard, developerGuard };
