@@ -145,6 +145,7 @@ model Subscription {
   paymentMethod String?
   paymentProof  String?
   amount        Float
+  isApproved    Boolean        @default(false)
 
   // Relations
   user          User          @relation(fields: [userId], references: [id])
