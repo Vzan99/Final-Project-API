@@ -11,7 +11,6 @@ import {
   RegisterUserSchema,
 } from "../schema/user.schema";
 import ReqValidator from "../middlewares/reqValidator.middleware";
-import { GoogleLoginController } from "../controllers/auth.controller";
 
 const router = Router();
 
@@ -30,7 +29,5 @@ router.post(
 router.post("/login", ReqValidator(LoginSchema), LoginController);
 
 router.post("/logout", LogoutController);
-
-router.post("/login/google", GoogleLoginController);
 
 export default router;

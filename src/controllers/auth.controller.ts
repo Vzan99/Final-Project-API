@@ -4,7 +4,6 @@ import {
   LoginService,
   RegisterAdminService,
 } from "../services/auth.service";
-import { loginWithGoogle } from "../services/googleAuth.service";
 
 async function RegisterUserController(
   req: Request,
@@ -127,22 +126,6 @@ export async function LogoutController(
     });
 
     res.status(200).json({ message: "Logout successful" });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function GoogleLoginController(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const { idToken } = req.body;
-    const user = await loginWithGoogle(idToken);
-
-    // You can issue a JWT or session here
-    res.json({ message: "Login successful", user });
   } catch (err) {
     next(err);
   }
