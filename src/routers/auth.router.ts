@@ -3,6 +3,7 @@ import {
   RegisterUserController,
   RegisterAdminController,
   LoginController,
+  LogoutController,
 } from "../controllers/auth.controller";
 import {
   LoginSchema,
@@ -10,7 +11,6 @@ import {
   RegisterUserSchema,
 } from "../schema/user.schema";
 import ReqValidator from "../middlewares/reqValidator.middleware";
-import { GoogleLoginController } from "../controllers/auth.controller";
 
 const router = Router();
 
@@ -28,6 +28,6 @@ router.post(
 
 router.post("/login", ReqValidator(LoginSchema), LoginController);
 
-router.post("/login/google", GoogleLoginController);
+router.post("/logout", LogoutController);
 
 export default router;

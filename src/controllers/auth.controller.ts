@@ -4,7 +4,6 @@ import {
   LoginService,
   RegisterAdminService,
 } from "../services/auth.service";
-import { loginWithGoogle } from "../services/googleAuth.service";
 
 async function RegisterUserController(
   req: Request,
@@ -74,6 +73,8 @@ async function RegisterAdminController(
   }
 }
 
+const isProd = process.env.NODE_ENV === "production";
+
 async function LoginController(
   req: Request,
   res: Response,
@@ -88,27 +89,41 @@ async function LoginController(
   try {
     const { user, token } = await LoginService({ email, password });
 
-    res.status(200).cookie("access_token", token).send({
-      message: "Login successful",
-      user: user,
-      token,
-    });
+    res
+      .status(200)
+      .cookie("access_token", token, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: isProd ? "none" : "lax",
+        path: "/",
+        maxAge: 24 * 60 * 60 * 1000,
+      })
+      .json({
+        message: "Login successful",
+        user,
+        token,
+      });
   } catch (err) {
     next(err);
   }
 }
 
-export async function GoogleLoginController(
+export async function LogoutController(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
-    const { idToken } = req.body;
-    const user = await loginWithGoogle(idToken);
+    console.log("Clearing access_token cookie...");
 
-    // You can issue a JWT or session here
-    res.json({ message: "Login successful", user });
+    res.clearCookie("access_token", {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
+      path: "/",
+    });
+
+    res.status(200).json({ message: "Logout successful" });
   } catch (err) {
     next(err);
   }
