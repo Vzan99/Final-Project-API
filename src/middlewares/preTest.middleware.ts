@@ -51,7 +51,7 @@ export async function VerifyPreSelectionPassed(
         .json({ message: "You did not pass the pre-selection test." });
     }
 
-    // Passed ✅
+    // Passed
     next();
   } catch (err) {
     next(err);

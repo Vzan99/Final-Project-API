@@ -13,7 +13,8 @@ export const createJobSchema = z.object({
   jobType: z.enum(["Full-time", "Part-time", "Contract"]),
   tags: z.array(z.string()).optional(),
   bannerUrl: z.string().optional(),
-  categoryId: z.string().uuid(),
+  category: z.string(),
+  hasTest: z.boolean().optional().default(false),
 });
 
 export type CreateJobInput = z.infer<typeof createJobSchema>;
@@ -34,7 +35,8 @@ export const updateJobSchema = z.object({
   jobType: z.enum(["Full-time", "Part-time", "Contract"]).optional(),
   tags: z.array(z.string()).optional(),
   bannerUrl: z.string().optional(),
-  categoryId: z.string().uuid().optional(),
+  category: z.string().optional(),
+  hasTest: z.boolean().optional().default(false),
 });
 
 export type UpdateJobInput = z.infer<typeof updateJobSchema>;
