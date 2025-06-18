@@ -1,13 +1,16 @@
 import { Router } from "express";
-import { VerifyToken as authMiddleware } from "../middlewares/auth.middleware";
-import { checkActiveSubscription } from "../middlewares/checkSubscription.middleware";
+import {
+  VerifyToken,
+  UserGuard,
+  SubscriberGuard,
+} from "../middlewares/auth.middleware";
 import { getCVFormData, generateCV } from "../controllers/cv.controller";
 import { asyncHandler } from "../utils/asyncHandler";
 
 const router = Router();
 
-router.use(authMiddleware);
-router.use(asyncHandler(checkActiveSubscription));
+// Hanya untuk user dengan subscription aktif
+router.use(VerifyToken, UserGuard, asyncHandler(SubscriberGuard));
 
 router.get("/cv-form", asyncHandler(getCVFormData));
 router.post("/generate-cv", asyncHandler(generateCV));

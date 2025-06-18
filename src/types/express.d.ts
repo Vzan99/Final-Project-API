@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { Role, Subscription } from "@prisma/client";
 
 export interface IUserReqParam {
   id: string;
@@ -11,6 +11,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: IUserReqParam;
+      subscription?: Subscription;
     }
   }
 }

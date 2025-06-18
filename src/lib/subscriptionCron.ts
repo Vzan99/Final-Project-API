@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import prisma from "./prisma";
 import dayjs from "dayjs";
-import { sendEmail } from "../utils/nodemailer";
+import { sendReminderEmail } from "../utils/nodemailer";
 
 export function initSubscriptionCron() {
   // Setiap hari jam 8 pagi
@@ -27,17 +27,7 @@ export function initSubscriptionCron() {
     });
 
     for (const sub of expiringSoon) {
-      await sendEmail({
-        to: sub.user.email,
-        subject: "🔔 Subscription Renewal Reminder",
-        html: `
-          <p>Hi ${sub.user.name},</p>
-          <p>Langganan kamu akan berakhir pada <strong>${dayjs(
-            sub.endDate
-          ).format("DD MMM YYYY")}</strong>.</p>
-          <p>Silakan perpanjang agar tetap bisa mengakses fitur premium seperti CV Generator dan Skill Assessment.</p>
-        `,
-      });
+      await sendReminderEmail(sub.user.email, sub.user.name, sub.endDate);
       console.log(`🔔 Sent reminder to ${sub.user.email}`);
     }
   });
