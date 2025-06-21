@@ -4,6 +4,9 @@ import {
   approveSubscription,
   getSubscriptionOptions,
   subscribe,
+  getMySubscription,
+  getSubscriptionAnalytics,
+  getSubscriptionHistory,
 } from "../controllers/subscription.controller";
 import {
   VerifyToken,
@@ -11,25 +14,38 @@ import {
   UserGuard,
 } from "../middlewares/auth.middleware";
 import { Multer } from "../utils/multer";
+import { asyncHandler } from "../utils/asyncHandler";
 
 const upload = Multer();
 const router = Router();
 
-// Routes khusus developer
-router.use(VerifyToken);
-router.use(DeveloperGuard);
+// Developer-only Routes
+router.use("/admin", VerifyToken, DeveloperGuard);
 
-router.get("/", getSubscriptions);
-router.patch("/:id/approve", approveSubscription);
+router.get("/admin", asyncHandler(getSubscriptions));
+router.patch("/admin/:id/approve", asyncHandler(approveSubscription));
+router.get("/admin/analytics", asyncHandler(getSubscriptionAnalytics));
 
-// Routes untuk user (beli subscription)
-router.get("/options", VerifyToken, UserGuard, getSubscriptionOptions);
+// User-only Routes
+router.get(
+  "/options",
+  VerifyToken,
+  UserGuard,
+  asyncHandler(getSubscriptionOptions)
+);
+router.get("/user/me", VerifyToken, UserGuard, asyncHandler(getMySubscription));
+router.get(
+  "/user/history",
+  VerifyToken,
+  UserGuard,
+  asyncHandler(getSubscriptionHistory)
+);
 router.post(
   "/user/subscribe",
   VerifyToken,
   UserGuard,
   upload.single("paymentProof"),
-  subscribe
+  asyncHandler(subscribe)
 );
 
 export default router;
