@@ -12,6 +12,10 @@ export async function createPreSelectionTest(
   const job = await prisma.job.findUnique({ where: { id: jobId } });
   if (!job) throw new Error("Job not found");
 
+  if (!job.hasTest) {
+    throw new Error("This job is not configured to use pre-selection test");
+  }
+
   const existingTest = await prisma.preSelectionTest.findUnique({
     where: { jobId },
   });
@@ -21,13 +25,6 @@ export async function createPreSelectionTest(
     data: {
       jobId,
       questions,
-    },
-  });
-
-  await prisma.job.update({
-    where: { id: jobId },
-    data: {
-      hasTest: true,
     },
   });
 
@@ -74,7 +71,6 @@ export async function submitPreSelectionAnswer(
 
   const test = job.preSelectionTest;
 
-  // Cek apakah user sudah pernah submit
   const existing = await prisma.preSelectionAnswer.findUnique({
     where: {
       userId_testId: {
@@ -85,7 +81,6 @@ export async function submitPreSelectionAnswer(
   });
   if (existing) throw new Error("You have already submitted this test.");
 
-  // Hitung skor
   const correctAnswers = (test.questions as any[]).map((q) => q.correctIndex);
   const userAnswers = payload.answers;
 
@@ -97,7 +92,6 @@ export async function submitPreSelectionAnswer(
   const percentage = (score / 25) * 100;
   const passed = percentage >= 75;
 
-  // Simpan jawaban
   const saved = await prisma.preSelectionAnswer.create({
     data: {
       userId,
@@ -139,7 +133,7 @@ export async function getApplicantsWithTestResult(jobId: string) {
     const user = app.user;
     const profile = user.profile;
 
-    const test = user.preSelectionAnswers[0]; // hanya satu jika unique
+    const test = user.preSelectionAnswers[0];
 
     return {
       name: user.name,
