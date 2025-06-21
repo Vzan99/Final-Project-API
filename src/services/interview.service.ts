@@ -3,6 +3,7 @@ import {
   CreateInterviewInput,
   UpdateInterviewInput,
 } from "../schema/interview.schema";
+import { sendEmail } from "../utils/nodemailer";
 
 export async function createInterview(
   adminId: string,
@@ -15,6 +16,9 @@ export async function createInterview(
 
   const job = await prisma.job.findUnique({
     where: { id: input.jobId },
+    include: {
+      company: true,
+    },
   });
   if (!job || job.companyId !== company.id)
     throw new Error("Unauthorized to schedule for this job");
@@ -30,6 +34,40 @@ export async function createInterview(
     },
   });
   // send email here
+  const subject = `Interview Scheduled for ${job.title}`;
+  const html = `
+    <div style="font-family: sans-serif; padding: 16px;">
+      <h2>Interview Scheduled</h2>
+      <p>Hello ${interview.user.name},</p>
+      <p>You have been scheduled for an interview for the position:</p>
+      <ul>
+        <li><strong>Job Title:</strong> ${job.title}</li>
+        <li><strong>Company:</strong> ${job.company.name}</li>
+        <li><strong>Date & Time:</strong> ${interview.dateTime.toLocaleString()}</li>
+        ${
+          interview.location
+            ? `<li><strong>Location:</strong> ${interview.location}</li>`
+            : ""
+        }
+      </ul>
+      ${
+        interview.notes
+          ? `<p><strong>Note from recruiter:</strong> ${interview.notes}</p>`
+          : ""
+      }
+      <p>Please prepare and be on time. Good luck!</p>
+      <br/>
+      <p style="font-size: 13px; color: #888;">This is an automated email from Precise Job Board.</p>
+    </div>
+  `;
+
+  await sendEmail({
+    to: interview.user.email,
+    subject,
+    html,
+  });
+
+  console.log(`Interview email sent to ${interview.user.email}`);
 
   return interview;
 }

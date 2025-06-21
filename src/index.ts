@@ -9,6 +9,7 @@ import PreTestRouter from "./routers/preTest.router";
 import JobRouter from "./routers/job.router";
 import subscriptionRouter from "./routers/subscription.router";
 import { initSubscriptionCron } from "./lib/subscriptionCron";
+import { initInterviewReminderCron } from "./lib/interviewCron";
 import cvRouter from "./routers/cv.router";
 import ApplicationRouter from "./routers/application.router";
 import InterviewRouter from "./routers/interview.router";
@@ -42,3 +43,4 @@ app.listen(port, () => {
 });
 
 initSubscriptionCron();
+initInterviewReminderCron();
