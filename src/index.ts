@@ -13,6 +13,9 @@ import { initInterviewReminderCron } from "./lib/interviewCron";
 import cvRouter from "./routers/cv.router";
 import ApplicationRouter from "./routers/application.router";
 import InterviewRouter from "./routers/interview.router";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const port = PORT || 8000;
 const app: Application = express();
