@@ -37,27 +37,32 @@ export async function getJobsByAdminHandler(
   try {
     const adminId = req.user!.id;
 
-    // Destructure dan beri default
     const {
       title,
       categoryId,
       status,
-      sort: sortQuery,
+      sort = "desc",
       page = "1",
       limit = "10",
     } = req.query;
 
-    // Validasi sort hanya boleh 'asc' atau 'desc'
-    const sort =
-      sortQuery === "asc" || sortQuery === "desc" ? sortQuery : undefined;
+    const pageNumber = Math.max(1, parseInt(page as string) || 1);
+    const limitNumber = Math.max(1, parseInt(limit as string) || 10);
 
-    const query = {
-      title: title as string,
-      categoryId: categoryId as string,
-      status: status as string,
-      sort: sort as "asc" | "desc" | undefined,
-      page: parseInt(page as string) || 1,
-      limit: parseInt(limit as string) || 10,
+    const query: {
+      title?: string;
+      categoryId?: string;
+      status?: string;
+      sort?: "asc" | "desc";
+      page: number;
+      limit: number;
+    } = {
+      title: typeof title === "string" ? title : undefined,
+      categoryId: typeof categoryId === "string" ? categoryId : undefined,
+      status: typeof status === "string" ? status : undefined,
+      sort: sort === "asc" || sort === "desc" ? sort : undefined,
+      page: pageNumber,
+      limit: limitNumber,
     };
 
     const result = await getJobsByAdmin(adminId, query);
