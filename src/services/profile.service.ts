@@ -7,6 +7,7 @@ async function GetProfileService(userId: string) {
       select: {
         name: true,
         email: true,
+        role: true,
         profile: {
           select: {
             birthDate: true,

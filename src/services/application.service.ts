@@ -67,13 +67,6 @@ export async function getApplicationDetail(
         include: {
           profile: true,
           preSelectionAnswers: {
-            where: {
-              test: {
-                jobId: {
-                  equals: undefined,
-                },
-              },
-            },
             include: {
               test: true,
             },
