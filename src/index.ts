@@ -14,6 +14,7 @@ import { scheduleAutoCloseJobs } from "./lib/autoCloseJobsCron";
 import cvRouter from "./routers/cv.router";
 import ApplicationRouter from "./routers/application.router";
 import InterviewRouter from "./routers/interview.router";
+import AnalyticsRouter from "./routers/analytics.router";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -41,6 +42,7 @@ app.use("/subscriptions", subscriptionRouter);
 app.use("/user", cvRouter);
 app.use("/applications", ApplicationRouter);
 app.use("/interviews", InterviewRouter);
+app.use("/analytics", AnalyticsRouter);
 
 app.listen(port, () => {
   console.log(`Server started on port ${port}`);
