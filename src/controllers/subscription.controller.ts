@@ -7,7 +7,7 @@ import {
   approveSubscriptionById,
 } from "../services/subscription.service";
 
-// ADMIN
+// DEVELOPER
 
 export const getSubscriptions = async (req: Request, res: Response) => {
   const data = await getAllSubscriptions();
@@ -18,6 +18,59 @@ export const approveSubscription = async (req: Request, res: Response) => {
   const { id } = req.params;
   const result = await approveSubscriptionById(id);
   return res.json(result);
+};
+
+export const getSubscriptionAnalytics = async (req: Request, res: Response) => {
+  const [total, active, expired, standard, professional, paidSubs] =
+    await Promise.all([
+      prisma.subscription.count(),
+      prisma.subscription.count({
+        where: {
+          endDate: { gte: new Date() },
+          isApproved: true,
+          paymentStatus: "PAID",
+        },
+      }),
+      prisma.subscription.count({
+        where: {
+          endDate: { lt: new Date() },
+          isApproved: true,
+          paymentStatus: "PAID",
+        },
+      }),
+      prisma.subscription.count({
+        where: {
+          type: "STANDARD",
+          isApproved: true,
+          paymentStatus: "PAID",
+        },
+      }),
+      prisma.subscription.count({
+        where: {
+          type: "PROFESSIONAL",
+          isApproved: true,
+          paymentStatus: "PAID",
+        },
+      }),
+      prisma.subscription.findMany({
+        where: {
+          isApproved: true,
+          paymentStatus: "PAID",
+        },
+        select: { amount: true },
+      }),
+    ]);
+
+  const revenue = paidSubs.reduce((sum, s) => sum + s.amount, 0);
+
+  return res.json({
+    total,
+    active,
+    expired,
+    standard,
+    professional,
+    revenue,
+  });
 };
 
 // USER
@@ -102,55 +155,6 @@ export const getMySubscription = async (req: Request, res: Response) => {
   }
 
   return res.json(sub);
-};
-
-export const getSubscriptionAnalytics = async (req: Request, res: Response) => {
-  const [total, active, expired, standard, professional, paidSubs] =
-    await Promise.all([
-      prisma.subscription.count(),
-      prisma.subscription.count({
-        where: {
-          endDate: { gte: new Date() },
-          isApproved: true,
-          paymentStatus: "PAID",
-        },
-      }),
-      prisma.subscription.count({
-        where: {
-          endDate: { lt: new Date() },
-          isApproved: true,
-          paymentStatus: "PAID",
-        },
-      }),
-      prisma.subscription.count({
-        where: { type: "STANDARD", isApproved: true, paymentStatus: "PAID" },
-      }),
-      prisma.subscription.count({
-        where: {
-          type: "PROFESSIONAL",
-          isApproved: true,
-          paymentStatus: "PAID",
-        },
-      }),
-      prisma.subscription.findMany({
-        where: {
-          isApproved: true,
-          paymentStatus: "PAID",
-        },
-        select: { amount: true },
-      }),
-    ]);
-
-  const revenue = paidSubs.reduce((sum, s) => sum + s.amount, 0);
-
-  return res.json({
-    total,
-    active,
-    expired,
-    standard,
-    professional,
-    revenue,
-  });
 };
 
 export const getSubscriptionHistory = async (req: Request, res: Response) => {
