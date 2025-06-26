@@ -39,3 +39,7 @@ export const LoginSchema = z.object({
   email: z.string().email("invalid email format").trim(),
   password: z.string().min(1, "Password is required"),
 });
+
+export const VerifyEmailSchema = z.object({
+  token: z.string().min(1, "Token is required"),
+});
