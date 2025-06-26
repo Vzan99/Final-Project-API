@@ -4,7 +4,9 @@ import { AnyZodObject, ZodError } from "zod";
 export default function QueryValidator(schema: AnyZodObject) {
   return (req: Request, res: Response, next: NextFunction): void => {
     try {
-      req.query = schema.parse(req.query);
+      const validated = schema.parse(req.query);
+      (req as any).validatedQuery = validated;
+
       next();
     } catch (err) {
       if (err instanceof ZodError) {

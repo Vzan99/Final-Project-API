@@ -3,6 +3,7 @@ import {
   RegisterUserService,
   LoginService,
   RegisterAdminService,
+  VerifyEmailService,
 } from "../services/auth.service";
 
 async function RegisterUserController(
@@ -47,7 +48,7 @@ async function RegisterAdminController(
   }
 
   try {
-    const { user, company } = await RegisterAdminService({
+    const { user } = await RegisterAdminService({
       email,
       password,
       name,
@@ -60,12 +61,6 @@ async function RegisterAdminController(
         id: user.id,
         email: user.email,
         role: user.role,
-      },
-      company: {
-        id: company.id,
-        name: company.name,
-        email: company.email,
-        phone: company.phone,
       },
     });
   } catch (err) {
@@ -114,8 +109,6 @@ export async function LogoutController(
   next: NextFunction
 ) {
   try {
-    console.log("Clearing access_token cookie...");
-
     res.clearCookie("access_token", {
       httpOnly: true,
       secure: isProd,
@@ -129,4 +122,26 @@ export async function LogoutController(
   }
 }
 
-export { RegisterUserController, RegisterAdminController, LoginController };
+async function VerifyEmailController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const token = (req as any).validatedQuery.token as string;
+
+    const result = await VerifyEmailService(token);
+
+    res.status(200).json(result);
+  } catch (err) {
+    console.error("Verification error:", err);
+    next(err);
+  }
+}
+
+export {
+  RegisterUserController,
+  RegisterAdminController,
+  LoginController,
+  VerifyEmailController,
+};
