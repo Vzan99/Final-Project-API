@@ -23,7 +23,6 @@ model User {
   resetTokenExpiry    DateTime?
   socialLoginProvider String?
 
-  // Relations
   profile             Profile?
   company             Company?
   applications        Application[]
@@ -39,18 +38,17 @@ model User {
 }
 
 model Profile {
-  id        String   @id @default(uuid())
-  birthDate DateTime
-  gender    String
-  education String
-  address   String
-  photoUrl  String?
-  resumeUrl String?
-  skills    String[]
+  id         String   @id @default(uuid())
+  birthDate  DateTime
+  gender     String
+  education  String
+  address    String
+  photoUrl   String?
+  resumeUrl  String?
+  skills     String[]
 
-  // Relations
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String   @unique
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String   @unique
 }
 
 model Company {
@@ -65,18 +63,16 @@ model Company {
   industry    String?
   foundedYear Int?
 
-  // Relations
-  admin       User     @relation(fields: [adminId], references: [id])
-  adminId     String   @unique
-  jobs        Job[]
-  reviews     CompanyReview[]
+  admin        User     @relation(fields: [adminId], references: [id])
+  adminId      String   @unique
+  jobs         Job[]
+  reviews      CompanyReview[]
 }
 
 model Category {
   id    String @id @default(uuid())
   name  String @unique
-  
-  // Relations
+
   jobs  Job[]
 }
 
@@ -95,8 +91,7 @@ model Job {
   bannerUrl        String?
   hasTest          Boolean             @default(false)
   createdAt        DateTime            @default(now())
-  
-  // Relations
+
   company          Company             @relation(fields: [companyId], references: [id])
   companyId        String
   category         Category            @relation(fields: [categoryId], references: [id])
@@ -117,7 +112,6 @@ model Application {
   testScore      Int?
   feedback       String?
 
-  // Relations
   user           User                @relation(fields: [userId], references: [id])
   userId         String
   job            Job                 @relation(fields: [jobId], references: [id])
@@ -129,13 +123,12 @@ model InterviewSchedule {
   dateTime     DateTime
   location     String?
   notes        String?
-  status       InterviewStatus @default(SCHEDULED)
-  reminderSent Boolean         @default(false)
+  status       InterviewStatus  @default(SCHEDULED)
+  reminderSent Boolean          @default(false)
 
-  // Relations
-  job          Job             @relation(fields: [jobId], references: [id])
+  job          Job              @relation(fields: [jobId], references: [id])
   jobId        String
-  user         User            @relation(fields: [userId], references: [id])
+  user         User             @relation(fields: [userId], references: [id])
   userId       String
 }
 
@@ -144,14 +137,13 @@ model Subscription {
   type          SubscriptionType
   startDate     DateTime
   endDate       DateTime
-  paymentStatus PaymentStatus @default(PENDING)
+  paymentStatus PaymentStatus  @default(PENDING)
   paymentMethod String?
   paymentProof  String?
   amount        Float
   isApproved    Boolean        @default(false)
 
-  // Relations
-  user          User          @relation(fields: [userId], references: [id])
+  user          User           @relation(fields: [userId], references: [id])
   userId        String
 }
 
@@ -165,7 +157,6 @@ model SkillAssessment {
   badgeImage      String?
   isActive        Boolean          @default(true)
 
-  // Relations
   developer       User             @relation("AssessmentDeveloper", fields: [developerId], references: [id])
   developerId     String
   userAssessments UserAssessment[]
@@ -181,7 +172,6 @@ model UserAssessment {
   timeTaken      Int?
   answers        Json?
 
-  // Relations
   user           User             @relation(fields: [userId], references: [id])
   userId         String
   assessment     SkillAssessment  @relation(fields: [assessmentId], references: [id])
@@ -199,8 +189,8 @@ model CompanyReview {
   workLifeRating Int?
   careerRating   Int?
   isVerified     Boolean   @default(false)
+  createdAt      DateTime  @default(now())
 
-  // Relations
   user           User     @relation(fields: [userId], references: [id])
   userId         String
   company        Company  @relation(fields: [companyId], references: [id])
@@ -215,9 +205,8 @@ model Certificate {
   expiresAt        DateTime?
   qrCodeUrl        String?
 
-  // Relations
   user             User             @relation(fields: [userId], references: [id])
-  userId         String
+  userId           String
   assessment       SkillAssessment  @relation(fields: [assessmentId], references: [id])
   assessmentId     String
 }
@@ -225,8 +214,7 @@ model Certificate {
 model SavedJob {
   id        String   @id @default(uuid())
   savedAt   DateTime @default(now())
-  
-  // Relations
+
   user      User     @relation(fields: [userId], references: [id])
   userId    String
   job       Job      @relation(fields: [jobId], references: [id])
@@ -240,7 +228,6 @@ model PreSelectionTest {
   questions Json
   createdAt DateTime @default(now())
 
-  // Relations
   job       Job      @relation(fields: [jobId], references: [id])
   jobId     String   @unique
   answers   PreSelectionAnswer[]
@@ -253,8 +240,7 @@ model PreSelectionAnswer {
   answers   Json
   createdAt DateTime @default(now())
 
-  // Relations
-  user      User     @relation(fields: [userId], references: [id])
+  user      User             @relation(fields: [userId], references: [id])
   userId    String
   test      PreSelectionTest @relation(fields: [testId], references: [id])
   testId    String
