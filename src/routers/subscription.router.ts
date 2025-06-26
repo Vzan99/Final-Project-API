@@ -20,11 +20,11 @@ const upload = Multer();
 const router = Router();
 
 // Developer-only Routes
-router.use("/admin", VerifyToken, DeveloperGuard);
+router.use("/developer", VerifyToken, DeveloperGuard);
 
-router.get("/admin", asyncHandler(getSubscriptions));
-router.patch("/admin/:id/approve", asyncHandler(approveSubscription));
-router.get("/admin/analytics", asyncHandler(getSubscriptionAnalytics));
+router.get("/developer", asyncHandler(getSubscriptions));
+router.patch("/developer/:id/approve", asyncHandler(approveSubscription));
+router.get("/developer/analytics", asyncHandler(getSubscriptionAnalytics));
 
 // User-only Routes
 router.get(
