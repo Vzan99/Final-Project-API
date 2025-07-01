@@ -4,6 +4,7 @@ import {
   LoginService,
   RegisterAdminService,
   VerifyEmailService,
+  SyncGoogleUserService,
 } from "../services/auth.service";
 
 async function RegisterUserController(
@@ -68,8 +69,6 @@ async function RegisterAdminController(
   }
 }
 
-const isProd = process.env.NODE_ENV === "production";
-
 async function LoginController(
   req: Request,
   res: Response,
@@ -80,6 +79,7 @@ async function LoginController(
   if (!email || !password) {
     return next(new Error("Missing email or password"));
   }
+  const isProd = process.env.NODE_ENV === "production";
 
   try {
     const { user, token } = await LoginService({ email, password });
@@ -108,6 +108,8 @@ export async function LogoutController(
   res: Response,
   next: NextFunction
 ) {
+  const isProd = process.env.NODE_ENV === "production";
+
   try {
     res.clearCookie("access_token", {
       httpOnly: true,
@@ -139,9 +141,39 @@ async function VerifyEmailController(
   }
 }
 
+async function SyncGoogleUserController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      throw new Error("Missing or invalid Authorization header");
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    const { user, token: jwtToken } = await SyncGoogleUserService(token);
+    const isProd = process.env.NODE_ENV === "production";
+
+    res.cookie("access_token", jwtToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: isProd ? "none" : "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(200).json({ message: "User synced", user });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export {
   RegisterUserController,
   RegisterAdminController,
   LoginController,
   VerifyEmailController,
+  SyncGoogleUserController,
 };

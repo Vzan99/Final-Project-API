@@ -5,6 +5,7 @@ import {
   LoginController,
   LogoutController,
   VerifyEmailController,
+  SyncGoogleUserController,
 } from "../controllers/auth.controller";
 import {
   LoginSchema,
@@ -14,6 +15,7 @@ import {
 } from "../schema/user.schema";
 import ReqValidator from "../middlewares/reqValidator.middleware";
 import QueryValidator from "../middlewares/queryValidator.middleware";
+import { VerifyToken } from "../middlewares/auth.middleware";
 
 const router = Router();
 
@@ -38,5 +40,7 @@ router.get(
   QueryValidator(VerifyEmailSchema),
   VerifyEmailController
 );
+
+router.post("/sync-google", SyncGoogleUserController);
 
 export default router;

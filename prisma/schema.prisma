@@ -34,7 +34,8 @@ model User {
   interviewSchedules  InterviewSchedule[]
   savedJobs           SavedJob[]
   preSelectionAnswers PreSelectionAnswer[]
-  verificationTokens VerificationToken[]
+  verificationTokens  VerificationToken[]
+  resetTokens         PasswordResetToken[]
 }
 
 model Profile {
@@ -53,9 +54,6 @@ model Profile {
 
 model Company {
   id          String   @id @default(uuid())
-  name        String
-  email       String   @unique
-  phone       String
   description String
   location    String
   logo        String?
@@ -249,6 +247,15 @@ model PreSelectionAnswer {
 }
 
 model VerificationToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model PasswordResetToken {
   id        String   @id @default(uuid())
   token     String   @unique
   userId    String

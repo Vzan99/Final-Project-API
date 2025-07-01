@@ -11,6 +11,11 @@ import { findUserByEmail } from "../helpers/user.helper";
 import { FE_URL, SECRET_KEY } from "../config";
 import { sendEmail } from "../utils/nodemailer";
 import { addHours } from "date-fns";
+import fs from "fs";
+import path from "path";
+import handlebars from "handlebars";
+import { createClient } from "@supabase/supabase-js";
+import { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } from "../config";
 
 async function RegisterUserService(param: IRegisterUserParam) {
   const isEmailExist = await prisma.user.findUnique({
@@ -44,61 +49,70 @@ async function RegisterUserService(param: IRegisterUserParam) {
     },
   });
 
+  const templatePath = path.join(__dirname, "../templates/verifyEmail.hbs");
+  const source = fs.readFileSync(templatePath, "utf-8");
+  const emailTemplate = handlebars.compile(source);
+  const html = emailTemplate({
+    name: nameFromEmail,
+    verificationLink: `${FE_URL}/auth/verify-email?token=${token}`,
+    year: new Date().getFullYear(),
+  });
+
   await sendEmail({
     to: param.email,
     subject: "Verify Your Email",
-    html: `
-      <p>Hi ${nameFromEmail},</p>
-      <p>Please verify your email:</p>
-      <a href="${FE_URL}/auth/verify-email?token=${token}" target="_blank">Verify My Email</a>
-    `,
+    html,
   });
 
   return user;
 }
 
 async function RegisterAdminService(param: IRegisterAdminParam) {
-  try {
-    const isEmailExist = await findUserByEmail(param.email);
-    if (isEmailExist) throw new Error("Email is already exist");
+  const isEmailExist = await findUserByEmail(param.email);
+  if (isEmailExist) throw new Error("Email is already exist");
+  if (!SECRET_KEY) throw new Error("Missing SECRET_KEY");
 
-    if (!SECRET_KEY) {
-      throw new Error("SECRET_KEY is not defined in environment variables");
-    }
+  const hashedPassword = await bcrypt.hash(param.password, 10);
 
-    const hashedPassword = await bcrypt.hash(param.password, 10);
+  const user = await prisma.user.create({
+    data: {
+      email: param.email,
+      password: hashedPassword,
+      phone: param.phone,
+      role: Role.ADMIN,
+      isVerified: false,
+      name: param.name,
+    },
+  });
 
-    const token = sign(
-      { email: param.email, name: param.name, role: Role.ADMIN },
-      SECRET_KEY,
-      { expiresIn: "1h" }
-    );
+  const payload = { userId: user.id, email: user.email };
+  const token = sign(payload, SECRET_KEY, { expiresIn: "1h" });
 
-    await sendEmail({
-      to: param.email,
-      subject: "Verify your email (Admin Registration)",
-      html: `
-        <p>Hi ${param.name},</p>
-        <p>Thanks for registering your company with Precise. Please verify your email by clicking the link below:</p>
-        <a href="${FE_URL}/auth/verify-email?token=${token}" target="_blank">Verify My Email</a>
-        <p>This link will expire in 1 hour. If you did not request this, please ignore this message.</p>
-      `,
-    });
+  await prisma.verificationToken.create({
+    data: {
+      token,
+      userId: user.id,
+      expiresAt: addHours(new Date(), 1),
+    },
+  });
 
-    const user = await prisma.user.create({
-      data: {
-        email: param.email,
-        password: hashedPassword,
-        role: Role.ADMIN,
-        isVerified: false,
-        name: param.name,
-      },
-    });
+  const templatePath = path.join(__dirname, "../templates/verifyEmail.hbs");
+  const source = fs.readFileSync(templatePath, "utf-8");
+  const emailTemplate = handlebars.compile(source);
 
-    return { user };
-  } catch (err) {
-    throw err;
-  }
+  const html = emailTemplate({
+    name: param.name,
+    verificationLink: `${FE_URL}/auth/verify-email?token=${token}`,
+    year: new Date().getFullYear(),
+  });
+
+  await sendEmail({
+    to: param.email,
+    subject: "Verify your email (Admin Registration)",
+    html,
+  });
+
+  return { user };
 }
 
 async function LoginService(param: ILoginParam) {
@@ -172,9 +186,56 @@ async function VerifyEmailService(token: string) {
   return { message: "Email verified successfully" };
 }
 
+async function SyncGoogleUserService(token: string) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("Supabase URL or Service Role key not configured");
+  }
+
+  if (!SECRET_KEY) throw new Error("Missing SECRET_KEY");
+
+  const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+  const {
+    data: { user },
+    error,
+  } = await supabaseAdmin.auth.getUser(token);
+
+  if (error || !user) {
+    throw new Error("Invalid Supabase token");
+  }
+
+  const email = user.email!;
+  const name = user.user_metadata.full_name || email.split("@")[0];
+
+  let dbUser = await prisma.user.findUnique({ where: { email } });
+
+  if (!dbUser) {
+    dbUser = await prisma.user.create({
+      data: {
+        email,
+        name,
+        role: Role.USER,
+        isVerified: true,
+      },
+    });
+  }
+
+  const payload = {
+    id: dbUser.id,
+    name: dbUser.name,
+    email: dbUser.email,
+    role: dbUser.role,
+  };
+
+  const jwt = sign(payload, SECRET_KEY, { expiresIn: "7d" });
+
+  return { user: dbUser, token: jwt };
+}
+
 export {
   RegisterUserService,
   RegisterAdminService,
   LoginService,
   VerifyEmailService,
+  SyncGoogleUserService,
 };
