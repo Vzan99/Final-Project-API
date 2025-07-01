@@ -4,7 +4,10 @@ import {
   getAssessmentsHandler,
   submitAssessmentHandler,
   getAssessmentResultHandler,
+  getAssessmentDetailHandler,
+  getDeveloperAssessmentsHandler,
 } from "../controllers/assessment.controller";
+
 import {
   VerifyToken,
   DeveloperGuard,
@@ -13,26 +16,38 @@ import {
 
 const router = express.Router();
 
-// GET all active assessments (for subscribed users)
-router.get("/", VerifyToken, SubscriberGuard, getAssessmentsHandler);
+// ─────────────────────────────────────────────────────────
+// USER with subscription
 
-// Submit answers to an assessment
+router.get("/", VerifyToken, SubscriberGuard, getAssessmentsHandler);
 router.post(
   "/:id/submit",
   VerifyToken,
   SubscriberGuard,
   submitAssessmentHandler
 );
-
-// Get result for a submitted assessment
 router.get(
   "/:id/result",
   VerifyToken,
   SubscriberGuard,
   getAssessmentResultHandler
 );
+router.get(
+  "/:id/detail",
+  VerifyToken,
+  SubscriberGuard,
+  getAssessmentDetailHandler
+);
 
-// Developer only: Create a new assessment
+// ─────────────────────────────────────────────────────────
+// DEVELOPER only
+
 router.post("/", VerifyToken, DeveloperGuard, createAssessmentHandler);
+router.get(
+  "/developer/all",
+  VerifyToken,
+  DeveloperGuard,
+  getDeveloperAssessmentsHandler
+);
 
 export default router;
