@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import {
   createInterview,
+  getAllInterviewsByAdmin,
   getInterviewsByJob,
   updateInterviewById,
   deleteInterviewById,
@@ -21,6 +22,22 @@ export async function createInterviewHandler(
       message: "Interview scheduled successfully",
       data: result,
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getAllInterviewsByAdminHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const adminId = req.user!.id;
+
+    const interviews = await getAllInterviewsByAdmin(adminId);
+
+    res.json({ success: true, data: interviews });
   } catch (err) {
     next(err);
   }

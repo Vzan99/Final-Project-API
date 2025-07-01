@@ -17,7 +17,11 @@ export async function createInterview(
   const job = await prisma.job.findUnique({
     where: { id: input.jobId },
     include: {
-      company: true,
+      company: {
+        include: {
+          admin: true,
+        },
+      },
     },
   });
   if (!job || job.companyId !== company.id)
@@ -42,7 +46,7 @@ export async function createInterview(
       <p>You have been scheduled for an interview for the position:</p>
       <ul>
         <li><strong>Job Title:</strong> ${job.title}</li>
-        <li><strong>Company:</strong> ${job.company.name}</li>
+        <li><strong>Company:</strong> ${job.company.admin.name}</li>
         <li><strong>Date & Time:</strong> ${interview.dateTime.toLocaleString()}</li>
         ${
           interview.location
@@ -72,6 +76,40 @@ export async function createInterview(
   return interview;
 }
 
+export async function getAllInterviewsByAdmin(adminId: string) {
+  const company = await prisma.company.findUnique({
+    where: { adminId },
+    include: { jobs: true },
+  });
+
+  if (!company) throw new Error("Company not found");
+
+  const jobIds = company.jobs.map((job) => job.id);
+
+  const interviews = await prisma.interviewSchedule.findMany({
+    where: { jobId: { in: jobIds } },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      job: {
+        select: {
+          id: true,
+          title: true,
+        },
+      },
+    },
+    orderBy: {
+      dateTime: "asc",
+    },
+  });
+
+  return interviews;
+}
 export async function getInterviewsByJob(jobId: string, adminId: string) {
   const company = await prisma.company.findUnique({
     where: { adminId },

@@ -23,7 +23,11 @@ export function initInterviewReminderCron() {
         user: true,
         job: {
           include: {
-            company: true,
+            company: {
+              include: {
+                admin: true,
+              },
+            },
           },
         },
       },
@@ -41,7 +45,7 @@ export function initInterviewReminderCron() {
           <p>This is a friendly reminder that you have an interview scheduled for:</p>
           <ul>
             <li><strong>Job:</strong> ${job.title}</li>
-            <li><strong>Company:</strong> ${job.company?.name}</li>
+            <li><strong>Company:</strong> ${job.company?.admin.name}</li>
             <li><strong>Date & Time:</strong> ${dayjs(dateTime).format(
               "DD MMM YYYY [at] HH:mm"
             )}</li>

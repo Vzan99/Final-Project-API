@@ -3,6 +3,7 @@ import ReqValidator from "../middlewares/reqValidator.middleware";
 import { VerifyToken, AdminGuard } from "../middlewares/auth.middleware";
 import {
   createInterviewHandler,
+  getAllInterviewsByAdminHandler,
   getInterviewsByJobHandler,
   updateInterviewHandler,
   deleteInterviewHandler,
@@ -21,6 +22,7 @@ router.post(
   ReqValidator(createInterviewSchema),
   createInterviewHandler
 );
+router.get("/all", VerifyToken, AdminGuard, getAllInterviewsByAdminHandler);
 router.get("/", VerifyToken, AdminGuard, getInterviewsByJobHandler);
 router.patch(
   "/:id",
