@@ -9,4 +9,6 @@ export const {
   NODEMAILER_PASS,
   NODEMAILER_USER,
   FE_URL,
+  SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY,
 } = process.env;
