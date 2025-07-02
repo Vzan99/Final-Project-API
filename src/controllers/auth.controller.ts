@@ -4,7 +4,11 @@ import {
   LoginService,
   RegisterAdminService,
   VerifyEmailService,
+  ResendVerificationEmailService,
   SyncGoogleUserService,
+  RequestPasswordResetService,
+  ResetPasswordService,
+  VerifyNewEmailService,
 } from "../services/auth.service";
 
 async function RegisterUserController(
@@ -32,8 +36,8 @@ async function RegisterUserController(
         role: user.role,
       },
     });
-  } catch (err) {
-    next(err);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message || "Something went wrong" });
   }
 }
 
@@ -64,8 +68,8 @@ async function RegisterAdminController(
         role: user.role,
       },
     });
-  } catch (err) {
-    next(err);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message || "Something went wrong" });
   }
 }
 
@@ -98,8 +102,8 @@ async function LoginController(
         user,
         token,
       });
-  } catch (err) {
-    next(err);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message || "Something went wrong" });
   }
 }
 
@@ -119,8 +123,8 @@ export async function LogoutController(
     });
 
     res.status(200).json({ message: "Logout successful" });
-  } catch (err) {
-    next(err);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message || "Something went wrong" });
   }
 }
 
@@ -135,9 +139,25 @@ async function VerifyEmailController(
     const result = await VerifyEmailService(token);
 
     res.status(200).json(result);
-  } catch (err) {
-    console.error("Verification error:", err);
-    next(err);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message || "Something went wrong" });
+  }
+}
+
+async function ResendVerificationController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) return next(new Error("Unauthorized"));
+
+    const result = await ResendVerificationEmailService(userId);
+
+    res.status(200).json(result);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message || "Something went wrong" });
   }
 }
 
@@ -165,8 +185,53 @@ async function SyncGoogleUserController(
     });
 
     res.status(200).json({ message: "User synced", user });
-  } catch (err) {
-    next(err);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message || "Something went wrong" });
+  }
+}
+
+async function RequestPasswordResetController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  const { email } = req.body;
+  if (!email) throw new Error("Email is Required");
+
+  try {
+    const result = await RequestPasswordResetService(email);
+    res.status(200).json(result);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message || "Something went wrong" });
+  }
+}
+
+async function ResetPasswordController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword)
+    throw new Error("Token and new password is Required");
+
+  try {
+    const result = await ResetPasswordService(token, newPassword);
+    res.status(200).json(result);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message || "Something went wrong" });
+  }
+}
+
+async function VerifyNewEmailController(req: Request, res: Response) {
+  const token = req.query.token as string;
+  if (!token) throw new Error("Token is Required");
+
+  try {
+    const result = await VerifyNewEmailService(token);
+    res.status(200).json(result);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
   }
 }
 
@@ -175,5 +240,9 @@ export {
   RegisterAdminController,
   LoginController,
   VerifyEmailController,
+  ResendVerificationController,
   SyncGoogleUserController,
+  RequestPasswordResetController,
+  ResetPasswordController,
+  VerifyNewEmailController,
 };
