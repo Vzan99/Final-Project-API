@@ -72,3 +72,46 @@ export const getDeveloperAssessmentsHandler = asyncHandler(
     res.json(assessments);
   }
 );
+
+// Developer-only: Update assessment
+export const updateAssessmentHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const developerId = req.user!.id;
+    const { id } = req.params;
+
+    const existing = await prisma.skillAssessment.findUnique({
+      where: { id },
+    });
+
+    if (!existing || existing.developerId !== developerId) {
+      return res.status(404).json({ message: "Assessment not found" });
+    }
+
+    const updated = await prisma.skillAssessment.update({
+      where: { id },
+      data: req.body,
+    });
+
+    res.json(updated);
+  }
+);
+
+// Developer-only: Delete assessment
+export const deleteAssessmentHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const developerId = req.user!.id;
+    const { id } = req.params;
+
+    const existing = await prisma.skillAssessment.findUnique({
+      where: { id },
+    });
+
+    if (!existing || existing.developerId !== developerId) {
+      return res.status(404).json({ message: "Assessment not found" });
+    }
+
+    await prisma.skillAssessment.delete({ where: { id } });
+
+    res.json({ message: "Assessment deleted" });
+  }
+);
