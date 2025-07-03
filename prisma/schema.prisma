@@ -47,6 +47,7 @@ model Profile {
   photoUrl   String?
   resumeUrl  String?
   skills     String[]
+  about      String?
 
   user       User     @relation(fields: [userId], references: [id])
   userId     String   @unique
@@ -249,7 +250,7 @@ model PreSelectionAnswer {
 model VerificationToken {
   id        String   @id @default(uuid())
   token     String   @unique
-  userId    String
+  userId    String   @unique 
   user      User     @relation(fields: [userId], references: [id])
   expiresAt DateTime
   createdAt DateTime @default(now())
@@ -258,7 +259,7 @@ model VerificationToken {
 model PasswordResetToken {
   id        String   @id @default(uuid())
   token     String   @unique
-  userId    String
+  userId    String   @unique
   user      User     @relation(fields: [userId], references: [id])
   expiresAt DateTime
   createdAt DateTime @default(now())

@@ -5,7 +5,7 @@ import {
 } from "../interfaces/user.interface";
 import prisma from "../lib/prisma";
 import { Role } from "@prisma/client";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { sign, verify } from "jsonwebtoken";
 import { findUserByEmail } from "../helpers/user.helper";
 import { FE_URL, SECRET_KEY } from "../config";
@@ -186,6 +186,47 @@ async function VerifyEmailService(token: string) {
   return { message: "Email verified successfully" };
 }
 
+async function ResendVerificationEmailService(userId: string) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error("User not found");
+  if (user.isVerified) throw new Error("Email already verified");
+
+  const token = sign({ userId: user.id, email: user.email }, SECRET_KEY!, {
+    expiresIn: "1h",
+  });
+
+  await prisma.verificationToken.upsert({
+    where: { userId: user.id },
+    update: {
+      token,
+      expiresAt: addHours(new Date(), 1),
+    },
+    create: {
+      userId: user.id,
+      token,
+      expiresAt: addHours(new Date(), 1),
+    },
+  });
+
+  const templatePath = path.join(__dirname, "../templates/verifyEmail.hbs");
+  const source = fs.readFileSync(templatePath, "utf-8");
+  const emailTemplate = handlebars.compile(source);
+
+  const html = emailTemplate({
+    name: user.name || user.email.split("@")[0],
+    verificationLink: `${FE_URL}/auth/verify-email?token=${token}`,
+    year: new Date().getFullYear(),
+  });
+
+  await sendEmail({
+    to: user.email,
+    subject: "Resend: Verify Your Email",
+    html,
+  });
+
+  return { message: "Verification email resent successfully" };
+}
+
 async function SyncGoogleUserService(token: string) {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error("Supabase URL or Service Role key not configured");
@@ -232,10 +273,131 @@ async function SyncGoogleUserService(token: string) {
   return { user: dbUser, token: jwt };
 }
 
+async function RequestPasswordResetService(email: string) {
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) throw new Error("User not found");
+  if (!SECRET_KEY) throw new Error("Missing SECRET_KEY");
+  if (!user.password) {
+    throw new Error(
+      "This account was created via Google. Please use Google login."
+    );
+  }
+
+  const payload = { userId: user.id, email: user.email };
+  const token = sign(payload, SECRET_KEY, { expiresIn: "1h" });
+
+  await prisma.passwordResetToken.upsert({
+    where: { userId: user.id },
+    update: {
+      token,
+      expiresAt: addHours(new Date(), 1),
+      createdAt: new Date(),
+    },
+    create: {
+      userId: user.id,
+      token,
+      expiresAt: addHours(new Date(), 1),
+      createdAt: new Date(),
+    },
+  });
+
+  const templatePath = path.join(__dirname, "../templates/resetPassword.hbs");
+  const source = fs.readFileSync(templatePath, "utf-8");
+  const emailTemplate = handlebars.compile(source);
+
+  const resetLink = `${FE_URL}/auth/reset-password?token=${token}`;
+
+  const html = emailTemplate({
+    name: user.name || user.email.split("@")[0],
+    resetLink,
+    year: new Date().getFullYear(),
+  });
+
+  await sendEmail({
+    to: email,
+    subject: "Reset Your Password",
+    html,
+  });
+
+  return { message: "Password reset email sent" };
+}
+
+async function ResetPasswordService(token: string, newPassword: string) {
+  if (!SECRET_KEY) throw new Error("Missing SECRET_KEY");
+
+  let decoded: { userId: string; email: string };
+
+  try {
+    decoded = verify(token, SECRET_KEY) as { userId: string; email: string };
+  } catch {
+    throw new Error("Invalid or expired password reset token");
+  }
+
+  const record = await prisma.passwordResetToken.findUnique({
+    where: { token },
+    include: { user: true },
+  });
+
+  if (!record) throw new Error("Invalid or expired password reset token");
+
+  if (record.expiresAt < new Date()) {
+    await prisma.passwordResetToken.delete({ where: { token } });
+    throw new Error("Password reset token has expired");
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  await prisma.user.update({
+    where: { id: decoded.userId },
+    data: { password: hashedPassword },
+  });
+
+  await prisma.passwordResetToken.delete({ where: { token } });
+
+  return { message: "Password has been reset successfully" };
+}
+
+async function VerifyNewEmailService(token: string) {
+  if (!SECRET_KEY) throw new Error("Missing SECRET_KEY");
+
+  // decode and validate
+  let payload: { userId: string; newEmail: string };
+  try {
+    payload = verify(token, SECRET_KEY) as any;
+  } catch {
+    throw new Error("Invalid or expired token");
+  }
+
+  // fetch record
+  const record = await prisma.verificationToken.findUnique({
+    where: { token },
+  });
+  if (!record) throw new Error("Invalid or expired token");
+  if (record.expiresAt < new Date()) {
+    await prisma.verificationToken.delete({ where: { token } });
+    throw new Error("Token has expired");
+  }
+
+  // update user email + mark verified
+  await prisma.user.update({
+    where: { id: payload.userId },
+    data: { email: payload.newEmail, isVerified: true },
+  });
+
+  // cleanup
+  await prisma.verificationToken.delete({ where: { token } });
+
+  return { message: "Your email has been updated successfully." };
+}
+
 export {
   RegisterUserService,
   RegisterAdminService,
   LoginService,
   VerifyEmailService,
+  ResendVerificationEmailService,
   SyncGoogleUserService,
+  RequestPasswordResetService,
+  ResetPasswordService,
+  VerifyNewEmailService,
 };

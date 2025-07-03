@@ -5,14 +5,18 @@ import {
   LoginController,
   LogoutController,
   VerifyEmailController,
+  ResendVerificationController,
   SyncGoogleUserController,
+  RequestPasswordResetController,
+  ResetPasswordController,
+  VerifyNewEmailController,
 } from "../controllers/auth.controller";
 import {
   LoginSchema,
   RegisterAdminSchema,
   RegisterUserSchema,
   VerifyEmailSchema,
-} from "../schema/user.schema";
+} from "../schema/auth.schema";
 import ReqValidator from "../middlewares/reqValidator.middleware";
 import QueryValidator from "../middlewares/queryValidator.middleware";
 import { VerifyToken } from "../middlewares/auth.middleware";
@@ -41,6 +45,18 @@ router.get(
   VerifyEmailController
 );
 
+router.post("/resend-verification", VerifyToken, ResendVerificationController);
+
 router.post("/sync-google", SyncGoogleUserController);
+
+router.post("/request-password-reset", RequestPasswordResetController);
+
+router.post("/reset-password", ResetPasswordController);
+
+router.get(
+  "/verify-new-email",
+  QueryValidator(VerifyEmailSchema),
+  VerifyNewEmailController
+);
 
 export default router;
