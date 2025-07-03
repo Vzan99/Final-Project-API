@@ -3,6 +3,7 @@ import {
   GetProfileService,
   ChangePasswordService,
   ChangeEmailService,
+  UpdateUserProfileService,
 } from "../services/profile.service";
 
 async function GetProfileController(
@@ -63,8 +64,33 @@ async function ChangeEmailController(req: Request, res: Response) {
   }
 }
 
+async function UpdateProfileController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (!req.user) throw new Error("Unauthorized");
+
+    const input = {
+      userId: req.user.id,
+      ...req.body,
+    };
+
+    const updatedProfile = await UpdateUserProfileService(input);
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      data: updatedProfile,
+    });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+}
+
 export {
   GetProfileController,
   ChangePasswordController,
   ChangeEmailController,
+  UpdateProfileController,
 };

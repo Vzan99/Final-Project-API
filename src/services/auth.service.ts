@@ -5,7 +5,7 @@ import {
 } from "../interfaces/user.interface";
 import prisma from "../lib/prisma";
 import { Role } from "@prisma/client";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { sign, verify } from "jsonwebtoken";
 import { findUserByEmail } from "../helpers/user.helper";
 import { FE_URL, SECRET_KEY } from "../config";
@@ -398,5 +398,6 @@ export {
   ResendVerificationEmailService,
   SyncGoogleUserService,
   RequestPasswordResetService,
-  ResetPasswordService, VerifyNewEmailService
+  ResetPasswordService,
+  VerifyNewEmailService,
 };

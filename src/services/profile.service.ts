@@ -1,5 +1,5 @@
 import prisma from "../lib/prisma";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { sign, verify } from "jsonwebtoken";
 import fs from "fs";
 import path from "path";
@@ -7,6 +7,7 @@ import handlebars from "handlebars";
 import { FE_URL, SECRET_KEY } from "../config";
 import { addHours } from "date-fns";
 import { sendEmail } from "../utils/nodemailer";
+import { IUpdateProfileInput } from "../interfaces/profile.interface";
 
 async function GetProfileService(userId: string) {
   try {
@@ -112,7 +113,6 @@ async function ChangeEmailService(
 ) {
   if (!SECRET_KEY) throw new Error("Missing SECRET_KEY");
 
-  // 1) Fetch user & verify password
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || !user.password)
     throw new Error("User not found or social login user");
@@ -120,7 +120,6 @@ async function ChangeEmailService(
   const match = await bcrypt.compare(currentPassword, user.password);
   if (!match) throw new Error("Current password is incorrect");
 
-  // 2) Validate & normalize newEmail
   const normalized = newEmail.toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized))
     throw new Error("Invalid email address");
@@ -130,19 +129,16 @@ async function ChangeEmailService(
   });
   if (already) throw new Error("Email is already in use");
 
-  // 3) Issue a JWT containing the new email
   const token = sign({ userId, newEmail: normalized }, SECRET_KEY, {
     expiresIn: "1h",
   });
 
-  // 4) Persist in VerificationToken
   await prisma.verificationToken.upsert({
     where: { userId },
     update: { token, expiresAt: addHours(new Date(), 1) },
     create: { userId, token, expiresAt: addHours(new Date(), 1) },
   });
 
-  // 5) Send verification email
   const source = fs.readFileSync(
     path.join(__dirname, "../templates/changeEmail.hbs"),
     "utf-8"
@@ -163,10 +159,60 @@ async function ChangeEmailService(
   return { message: "Verification link sent to your new email." };
 }
 
+async function UpdateUserProfileService(input: IUpdateProfileInput) {
+  const {
+    userId,
+    name,
+    email,
+    phone,
+    birthDate,
+    gender,
+    education,
+    address,
+    skills,
+    about,
+  } = input;
 
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        name,
+        email,
+        phone,
+      },
+    });
+
+    const profile = await prisma.profile.upsert({
+      where: { userId },
+      update: {
+        birthDate: new Date(birthDate),
+        gender,
+        education,
+        address,
+        skills,
+        about,
+      },
+      create: {
+        userId,
+        birthDate: new Date(birthDate),
+        gender,
+        education,
+        address,
+        skills,
+        about,
+      },
+    });
+
+    return profile;
+  } catch (error) {
+    throw new Error("Failed to update profile: " + (error as Error).message);
+  }
+}
 
 export {
   GetProfileService,
   ChangePasswordService,
   ChangeEmailService,
+  UpdateUserProfileService,
 };

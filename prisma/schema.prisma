@@ -47,6 +47,7 @@ model Profile {
   photoUrl   String?
   resumeUrl  String?
   skills     String[]
+  about      String?
 
   user       User     @relation(fields: [userId], references: [id])
   userId     String   @unique
