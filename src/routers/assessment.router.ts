@@ -6,6 +6,8 @@ import {
   getAssessmentResultHandler,
   getAssessmentDetailHandler,
   getDeveloperAssessmentsHandler,
+  updateAssessmentHandler,
+  deleteAssessmentHandler,
 } from "../controllers/assessment.controller";
 
 import {
@@ -49,5 +51,7 @@ router.get(
   DeveloperGuard,
   getDeveloperAssessmentsHandler
 );
+router.put("/:id", VerifyToken, DeveloperGuard, updateAssessmentHandler);
+router.delete("/:id", VerifyToken, DeveloperGuard, deleteAssessmentHandler);
 
 export default router;

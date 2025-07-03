@@ -23,7 +23,11 @@ export const createAssessment = async (
 ) => {
   return prisma.skillAssessment.create({
     data: {
-      ...input,
+      name: input.name,
+      description: input.description,
+      passingScore: input.passingScore ?? 75,
+      timeLimit: input.timeLimit ?? 30,
+      questions: input.questions,
       developerId,
     },
   });

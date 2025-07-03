@@ -16,6 +16,7 @@ export function initSubscriptionCron() {
           lt: dayAfter,
         },
         isApproved: true,
+        paymentStatus: "PAID",
       },
       include: {
         user: true,
@@ -23,8 +24,11 @@ export function initSubscriptionCron() {
     });
 
     for (const sub of expiringSoon) {
-      await sendReminderEmail(sub.user.email, sub.user.name, sub.endDate);
-      console.log(` Sent reminder to ${sub.user.email}`);
+      try {
+        await sendReminderEmail(sub.user.email, sub.user.name, sub.endDate);
+      } catch (err) {
+        console.error(`Failed to send email to ${sub.user.email}`, err);
+      }
     }
   });
 }

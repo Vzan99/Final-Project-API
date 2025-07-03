@@ -1,11 +1,17 @@
 import { Router } from "express";
-import { VerifyToken, AdminGuard } from "../middlewares/auth.middleware";
+import {
+  VerifyToken,
+  AdminGuard,
+  DeveloperGuard,
+} from "../middlewares/auth.middleware";
 import {
   getUserDemographicsHandler,
   getSalaryTrendsHandler,
   getApplicantInterestsHandler,
   getAnalyticsOverviewHandler,
+  getDeveloperOverview,
 } from "../controllers/analytics.controller";
+import { asyncHandler } from "../utils/asyncHandler";
 
 const router = Router();
 
@@ -23,5 +29,11 @@ router.get(
   getApplicantInterestsHandler
 );
 router.get("/overview", VerifyToken, AdminGuard, getAnalyticsOverviewHandler);
+router.get(
+  "/developer-overview",
+  VerifyToken,
+  DeveloperGuard,
+  asyncHandler(getDeveloperOverview)
+);
 
 export default router;
