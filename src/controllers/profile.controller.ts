@@ -4,6 +4,8 @@ import {
   ChangePasswordService,
   ChangeEmailService,
   UpdateUserProfileService,
+  UpdateProfilePhotoService,
+  UpdateResumeService,
 } from "../services/profile.service";
 
 async function GetProfileController(
@@ -88,9 +90,57 @@ async function UpdateProfileController(
   }
 }
 
+async function UpdateProfilePhotoController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.user?.id;
+    const file = req.file;
+
+    if (!userId || !file)
+      throw new Error("User ID and photo file are required");
+
+    const result = await UpdateProfilePhotoService(userId, file);
+
+    res.status(200).json({
+      message: result.message,
+      filename: result.filename,
+    });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+}
+
+async function UpdateResumeController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.user?.id;
+    const file = req.file;
+
+    if (!userId || !file)
+      throw new Error("User ID and resume file are required");
+
+    const result = await UpdateResumeService(userId, file);
+
+    res.status(200).json({
+      message: result.message,
+      filename: result.filename,
+    });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+}
+
 export {
   GetProfileController,
   ChangePasswordController,
   ChangeEmailController,
   UpdateProfileController,
+  UpdateProfilePhotoController,
+  UpdateResumeController,
 };

@@ -26,7 +26,7 @@ export const RegisterAdminSchema = z.object({
       "Password must contain at least one special character"
     )
     .nonempty("Password is required"),
-  name: z.string().min(2, "Company name is required").trim(),
+  name: z.string().min(2, "Company name is at least 2 letters").trim(),
   phone: z
     .string()
     .min(6, "Phone number is required")

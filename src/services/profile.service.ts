@@ -8,6 +8,7 @@ import { FE_URL, SECRET_KEY } from "../config";
 import { addHours } from "date-fns";
 import { sendEmail } from "../utils/nodemailer";
 import { IUpdateProfileInput } from "../interfaces/profile.interface";
+import { cloudinaryUpload, cloudinaryRemove } from "../utils/cloudinary";
 
 async function GetProfileService(userId: string) {
   try {
@@ -17,6 +18,7 @@ async function GetProfileService(userId: string) {
         id: true,
         name: true,
         email: true,
+        phone: true,
         role: true,
         isVerified: true,
         profile: {
@@ -28,6 +30,7 @@ async function GetProfileService(userId: string) {
             photoUrl: true,
             resumeUrl: true,
             skills: true,
+            about: true,
           },
         },
         certificates: {
@@ -163,7 +166,6 @@ async function UpdateUserProfileService(input: IUpdateProfileInput) {
   const {
     userId,
     name,
-    email,
     phone,
     birthDate,
     gender,
@@ -173,35 +175,47 @@ async function UpdateUserProfileService(input: IUpdateProfileInput) {
     about,
   } = input;
 
+  function removeUndefined<T extends object>(obj: T): Partial<T> {
+    return Object.entries(obj).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        (acc as any)[key] = value;
+      }
+      return acc;
+    }, {} as Partial<T>);
+  }
+
   try {
     await prisma.user.update({
       where: { id: userId },
-      data: {
+      data: removeUndefined({
         name,
-        email,
         phone,
-      },
+      }),
     });
+
+    const profileUpdateData = removeUndefined({
+      birthDate: birthDate ? new Date(birthDate) : undefined,
+      gender,
+      education,
+      address,
+      skills,
+      about,
+    });
+
+    const profileCreateData = {
+      userId,
+      birthDate: birthDate ? new Date(birthDate) : new Date(),
+      gender: gender || "",
+      education: education || "",
+      address: address || "",
+      skills: skills || [],
+      about: about || null,
+    };
 
     const profile = await prisma.profile.upsert({
       where: { userId },
-      update: {
-        birthDate: new Date(birthDate),
-        gender,
-        education,
-        address,
-        skills,
-        about,
-      },
-      create: {
-        userId,
-        birthDate: new Date(birthDate),
-        gender,
-        education,
-        address,
-        skills,
-        about,
-      },
+      update: profileUpdateData,
+      create: profileCreateData,
     });
 
     return profile;
@@ -210,9 +224,79 @@ async function UpdateUserProfileService(input: IUpdateProfileInput) {
   }
 }
 
+async function UpdateProfilePhotoService(
+  userId: string,
+  file: Express.Multer.File
+) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        profile: { select: { photoUrl: true } },
+      },
+    });
+
+    const oldPhoto = user?.profile?.photoUrl;
+
+    const uploadRes = await cloudinaryUpload(file);
+
+    const fullFilename = `${uploadRes.public_id}.${uploadRes.format}`;
+
+    if (oldPhoto) {
+      const oldPublicId = oldPhoto.split(".")[0];
+      await cloudinaryRemove(oldPublicId);
+    }
+
+    await prisma.profile.update({
+      where: { userId },
+      data: { photoUrl: fullFilename },
+    });
+
+    return { message: "Photo updated successfully", filename: fullFilename };
+  } catch (err) {
+    throw new Error(
+      "Failed to update profile photo: " + (err as Error).message
+    );
+  }
+}
+
+async function UpdateResumeService(userId: string, file: Express.Multer.File) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        profile: { select: { resumeUrl: true } },
+      },
+    });
+
+    const oldResume = user?.profile?.resumeUrl;
+
+    const uploadRes = await cloudinaryUpload(file, "raw");
+
+    const ext = path.extname(file.originalname);
+    const fullFilename = `${uploadRes.public_id}${ext}`;
+
+    if (oldResume) {
+      const oldPublicId = oldResume.split(".")[0];
+      await cloudinaryRemove(oldPublicId);
+    }
+
+    await prisma.profile.update({
+      where: { userId },
+      data: { resumeUrl: fullFilename },
+    });
+
+    return { message: "Resume uploaded successfully", filename: fullFilename };
+  } catch (err) {
+    throw new Error("Failed to update resume: " + (err as Error).message);
+  }
+}
+
 export {
   GetProfileService,
   ChangePasswordService,
   ChangeEmailService,
   UpdateUserProfileService,
+  UpdateProfilePhotoService,
+  UpdateResumeService,
 };

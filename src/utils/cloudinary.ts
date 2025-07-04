@@ -10,13 +10,14 @@ cloudinary.config({
 });
 
 export function cloudinaryUpload(
-  file: Express.Multer.File
+  file: Express.Multer.File,
+  resourceType: "image" | "raw" = "image"
 ): Promise<UploadApiResponse> {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
-      (err, res: UploadApiResponse) => {
-        if (err) return reject(err);
-
+      { resource_type: resourceType },
+      (err: any, res) => {
+        if (err || !res) return reject(err || new Error("Upload failed"));
         resolve(res);
       }
     );
@@ -36,9 +37,11 @@ export function extractPublicIdFromUrl(url: string) {
   }
 }
 
-export async function cloudinaryRemove(secure_url: string) {
+export async function cloudinaryRemove(publicIdOrUrl: string) {
   try {
-    const publicId = extractPublicIdFromUrl(secure_url);
+    const publicId = publicIdOrUrl.includes(".")
+      ? publicIdOrUrl.split(".")[0]
+      : publicIdOrUrl;
 
     return await cloudinary.uploader.destroy(publicId);
   } catch (err) {
