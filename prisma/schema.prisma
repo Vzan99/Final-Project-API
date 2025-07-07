@@ -39,18 +39,38 @@ model User {
 }
 
 model Profile {
-  id         String   @id @default(uuid())
+  id         String     @id @default(uuid())
   birthDate  DateTime
   gender     String
   education  String
   address    String
   photoUrl   String?
+  bannerUrl  String?     
   resumeUrl  String?
   skills     String[]
   about      String?
 
-  user       User     @relation(fields: [userId], references: [id])
-  userId     String   @unique
+  user       User         @relation(fields: [userId], references: [id])
+  userId     String       @unique
+  experiences Experience[]  
+}
+
+model Experience {
+  id               String         @id @default(uuid())
+  title            String
+  employmentType   EmploymentType?
+  companyName      String
+  currentlyWorking Boolean        @default(false)
+  startDate        DateTime
+  endDate          DateTime?
+  location         String?
+  locationType     LocationType?
+  description      String?
+
+  profile          Profile        @relation(fields: [profileId], references: [id])
+  profileId        String
+
+  @@index([profileId])
 }
 
 model Company {
@@ -58,6 +78,7 @@ model Company {
   description String
   location    String
   logo        String?
+  bannerUrl   String?    
   website     String?
   industry    String?
   foundedYear Int?
@@ -305,4 +326,20 @@ enum InterviewStatus {
   COMPLETED
   CANCELLED
   RESCHEDULED
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+  TEMPORARY
+  VOLUNTEER
+  OTHER
+}
+
+enum LocationType {
+  REMOTE
+  ON_SITE
+  HYBRID
 }

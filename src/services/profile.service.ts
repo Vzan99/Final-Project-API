@@ -7,7 +7,12 @@ import handlebars from "handlebars";
 import { FE_URL, SECRET_KEY } from "../config";
 import { addHours } from "date-fns";
 import { sendEmail } from "../utils/nodemailer";
-import { IUpdateProfileInput } from "../interfaces/profile.interface";
+import {
+  IUpdateProfileInput,
+  IExperienceInput,
+} from "../interfaces/profile.interface";
+import { cloudinaryUpload, cloudinaryRemove } from "../utils/cloudinary";
+import { EmploymentType, LocationType } from "@prisma/client";
 
 async function GetProfileService(userId: string) {
   try {
@@ -17,19 +22,11 @@ async function GetProfileService(userId: string) {
         id: true,
         name: true,
         email: true,
+        phone: true,
         role: true,
         isVerified: true,
-        profile: {
-          select: {
-            birthDate: true,
-            gender: true,
-            education: true,
-            address: true,
-            photoUrl: true,
-            resumeUrl: true,
-            skills: true,
-          },
-        },
+        profile: true,
+        company: true,
         certificates: {
           select: {
             id: true,
@@ -72,10 +69,24 @@ async function GetProfileService(userId: string) {
         }
       : undefined;
 
-    return {
-      ...user,
+    const baseResponse: any = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      isVerified: user.isVerified,
+      certificates: user.certificates,
       subscription,
     };
+
+    if (user.role === "USER") {
+      baseResponse.profile = user.profile;
+    } else if (user.role === "ADMIN") {
+      baseResponse.company = user.company;
+    }
+
+    return baseResponse;
   } catch (err) {
     throw err;
   }
@@ -163,7 +174,6 @@ async function UpdateUserProfileService(input: IUpdateProfileInput) {
   const {
     userId,
     name,
-    email,
     phone,
     birthDate,
     gender,
@@ -173,35 +183,47 @@ async function UpdateUserProfileService(input: IUpdateProfileInput) {
     about,
   } = input;
 
+  function removeUndefined<T extends object>(obj: T): Partial<T> {
+    return Object.entries(obj).reduce((acc, [key, value]) => {
+      if (value !== undefined) {
+        (acc as any)[key] = value;
+      }
+      return acc;
+    }, {} as Partial<T>);
+  }
+
   try {
     await prisma.user.update({
       where: { id: userId },
-      data: {
+      data: removeUndefined({
         name,
-        email,
         phone,
-      },
+      }),
     });
+
+    const profileUpdateData = removeUndefined({
+      birthDate: birthDate ? new Date(birthDate) : undefined,
+      gender,
+      education,
+      address,
+      skills,
+      about,
+    });
+
+    const profileCreateData = {
+      userId,
+      birthDate: birthDate ? new Date(birthDate) : new Date(),
+      gender: gender || "",
+      education: education || "",
+      address: address || "",
+      skills: skills || [],
+      about: about || null,
+    };
 
     const profile = await prisma.profile.upsert({
       where: { userId },
-      update: {
-        birthDate: new Date(birthDate),
-        gender,
-        education,
-        address,
-        skills,
-        about,
-      },
-      create: {
-        userId,
-        birthDate: new Date(birthDate),
-        gender,
-        education,
-        address,
-        skills,
-        about,
-      },
+      update: profileUpdateData,
+      create: profileCreateData,
     });
 
     return profile;
@@ -210,9 +232,204 @@ async function UpdateUserProfileService(input: IUpdateProfileInput) {
   }
 }
 
+async function UpdateProfilePhotoService(
+  userId: string,
+  file: Express.Multer.File
+) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        profile: { select: { photoUrl: true } },
+      },
+    });
+
+    const oldPhoto = user?.profile?.photoUrl;
+
+    const uploadRes = await cloudinaryUpload(file);
+
+    const fullFilename = `${uploadRes.public_id}.${uploadRes.format}`;
+
+    if (oldPhoto) {
+      const oldPublicId = oldPhoto.split(".")[0];
+      await cloudinaryRemove(oldPublicId);
+    }
+
+    await prisma.profile.update({
+      where: { userId },
+      data: { photoUrl: fullFilename },
+    });
+
+    return { message: "Photo updated successfully", filename: fullFilename };
+  } catch (err) {
+    throw new Error(
+      "Failed to update profile photo: " + (err as Error).message
+    );
+  }
+}
+
+async function UpdateResumeService(userId: string, file: Express.Multer.File) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        profile: { select: { resumeUrl: true } },
+      },
+    });
+
+    const oldResume = user?.profile?.resumeUrl;
+
+    const uploadRes = await cloudinaryUpload(file, "raw");
+
+    const ext = path.extname(file.originalname);
+    const fullFilename = `${uploadRes.public_id}${ext}`;
+
+    if (oldResume) {
+      const oldPublicId = oldResume.split(".")[0];
+      await cloudinaryRemove(oldPublicId);
+    }
+
+    await prisma.profile.update({
+      where: { userId },
+      data: { resumeUrl: fullFilename },
+    });
+
+    return { message: "Resume uploaded successfully", filename: fullFilename };
+  } catch (err) {
+    throw new Error("Failed to update resume: " + (err as Error).message);
+  }
+}
+
+async function UpdateBannerService(
+  userId: string,
+  role: string,
+  file: Express.Multer.File
+) {
+  if (!file) throw new Error("No file uploaded");
+
+  const uploadRes = await cloudinaryUpload(file);
+  const fullFilename = `${uploadRes.public_id}.${uploadRes.format}`;
+
+  if (role === "USER") {
+    const existing = await prisma.profile.findUnique({
+      where: { userId },
+      select: { bannerUrl: true },
+    });
+
+    if (existing?.bannerUrl) {
+      const publicId = existing.bannerUrl.split(".")[0];
+      await cloudinaryRemove(publicId);
+    }
+
+    await prisma.profile.update({
+      where: { userId },
+      data: { bannerUrl: fullFilename },
+    });
+
+    return { message: "User banner updated", filename: fullFilename };
+  }
+
+  if (role === "ADMIN") {
+    const existing = await prisma.company.findUnique({
+      where: { adminId: userId },
+      select: { bannerUrl: true },
+    });
+
+    if (existing?.bannerUrl) {
+      const publicId = existing.bannerUrl.split(".")[0];
+      await cloudinaryRemove(publicId);
+    }
+
+    await prisma.company.update({
+      where: { adminId: userId },
+      data: { bannerUrl: fullFilename },
+    });
+
+    return { message: "Company banner updated", filename: fullFilename };
+  }
+
+  throw new Error("Unauthorized role");
+}
+
+async function UpdateExperiencesService(
+  userId: string,
+  experiences: IExperienceInput[]
+) {
+  const profile = await prisma.profile.findUnique({ where: { userId } });
+  if (!profile) throw new Error("Profile not found");
+
+  const profileId = profile.id;
+
+  const toCreate = experiences.filter((e) => !e.id);
+  const toUpdate = experiences.filter((e) => e.id);
+  const toUpdateIds = toUpdate.map((e) => e.id);
+
+  const existing = await prisma.experience.findMany({
+    where: { profileId },
+    select: { id: true },
+  });
+  const existingIds = existing.map((e) => e.id);
+
+  const toDelete = existingIds.filter((id) => !toUpdateIds.includes(id));
+
+  await prisma.experience.deleteMany({
+    where: { id: { in: toDelete } },
+  });
+
+  const updatePromises = toUpdate.map((e) =>
+    prisma.experience.update({
+      where: { id: e.id },
+      data: {
+        title: e.title,
+        employmentType: e.employmentType
+          ? { set: e.employmentType }
+          : undefined,
+        companyName: e.companyName,
+        currentlyWorking: e.currentlyWorking || false,
+        startDate: new Date(e.startDate),
+        endDate: e.endDate ? new Date(e.endDate) : undefined,
+
+        location: e.location,
+        locationType: e.locationType ? { set: e.locationType } : undefined,
+        description: e.description,
+      },
+    })
+  );
+
+  const createPromises = toCreate.map((e) =>
+    prisma.experience.create({
+      data: {
+        title: e.title,
+        employmentType: e.employmentType,
+        companyName: e.companyName,
+        currentlyWorking: e.currentlyWorking || false,
+        startDate: new Date(e.startDate),
+        endDate: e.endDate ? new Date(e.endDate) : undefined,
+        location: e.location,
+        locationType: e.locationType,
+        description: e.description,
+        profileId,
+      },
+    })
+  );
+
+  await Promise.all([...updatePromises, ...createPromises]);
+
+  const updatedExperiences = await prisma.experience.findMany({
+    where: { profileId },
+    orderBy: { startDate: "desc" },
+  });
+
+  return updatedExperiences;
+}
+
 export {
   GetProfileService,
   ChangePasswordService,
   ChangeEmailService,
   UpdateUserProfileService,
+  UpdateProfilePhotoService,
+  UpdateResumeService,
+  UpdateBannerService,
+  UpdateExperiencesService,
 };
