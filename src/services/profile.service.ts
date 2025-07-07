@@ -7,8 +7,12 @@ import handlebars from "handlebars";
 import { FE_URL, SECRET_KEY } from "../config";
 import { addHours } from "date-fns";
 import { sendEmail } from "../utils/nodemailer";
-import { IUpdateProfileInput } from "../interfaces/profile.interface";
+import {
+  IUpdateProfileInput,
+  IExperienceInput,
+} from "../interfaces/profile.interface";
 import { cloudinaryUpload, cloudinaryRemove } from "../utils/cloudinary";
+import { EmploymentType, LocationType } from "@prisma/client";
 
 async function GetProfileService(userId: string) {
   try {
@@ -21,18 +25,8 @@ async function GetProfileService(userId: string) {
         phone: true,
         role: true,
         isVerified: true,
-        profile: {
-          select: {
-            birthDate: true,
-            gender: true,
-            education: true,
-            address: true,
-            photoUrl: true,
-            resumeUrl: true,
-            skills: true,
-            about: true,
-          },
-        },
+        profile: true,
+        company: true,
         certificates: {
           select: {
             id: true,
@@ -75,10 +69,24 @@ async function GetProfileService(userId: string) {
         }
       : undefined;
 
-    return {
-      ...user,
+    const baseResponse: any = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      isVerified: user.isVerified,
+      certificates: user.certificates,
       subscription,
     };
+
+    if (user.role === "USER") {
+      baseResponse.profile = user.profile;
+    } else if (user.role === "ADMIN") {
+      baseResponse.company = user.company;
+    }
+
+    return baseResponse;
   } catch (err) {
     throw err;
   }
@@ -292,6 +300,129 @@ async function UpdateResumeService(userId: string, file: Express.Multer.File) {
   }
 }
 
+async function UpdateBannerService(
+  userId: string,
+  role: string,
+  file: Express.Multer.File
+) {
+  if (!file) throw new Error("No file uploaded");
+
+  const uploadRes = await cloudinaryUpload(file);
+  const fullFilename = `${uploadRes.public_id}.${uploadRes.format}`;
+
+  if (role === "USER") {
+    const existing = await prisma.profile.findUnique({
+      where: { userId },
+      select: { bannerUrl: true },
+    });
+
+    if (existing?.bannerUrl) {
+      const publicId = existing.bannerUrl.split(".")[0];
+      await cloudinaryRemove(publicId);
+    }
+
+    await prisma.profile.update({
+      where: { userId },
+      data: { bannerUrl: fullFilename },
+    });
+
+    return { message: "User banner updated", filename: fullFilename };
+  }
+
+  if (role === "ADMIN") {
+    const existing = await prisma.company.findUnique({
+      where: { adminId: userId },
+      select: { bannerUrl: true },
+    });
+
+    if (existing?.bannerUrl) {
+      const publicId = existing.bannerUrl.split(".")[0];
+      await cloudinaryRemove(publicId);
+    }
+
+    await prisma.company.update({
+      where: { adminId: userId },
+      data: { bannerUrl: fullFilename },
+    });
+
+    return { message: "Company banner updated", filename: fullFilename };
+  }
+
+  throw new Error("Unauthorized role");
+}
+
+async function UpdateExperiencesService(
+  userId: string,
+  experiences: IExperienceInput[]
+) {
+  const profile = await prisma.profile.findUnique({ where: { userId } });
+  if (!profile) throw new Error("Profile not found");
+
+  const profileId = profile.id;
+
+  const toCreate = experiences.filter((e) => !e.id);
+  const toUpdate = experiences.filter((e) => e.id);
+  const toUpdateIds = toUpdate.map((e) => e.id);
+
+  const existing = await prisma.experience.findMany({
+    where: { profileId },
+    select: { id: true },
+  });
+  const existingIds = existing.map((e) => e.id);
+
+  const toDelete = existingIds.filter((id) => !toUpdateIds.includes(id));
+
+  await prisma.experience.deleteMany({
+    where: { id: { in: toDelete } },
+  });
+
+  const updatePromises = toUpdate.map((e) =>
+    prisma.experience.update({
+      where: { id: e.id },
+      data: {
+        title: e.title,
+        employmentType: e.employmentType
+          ? { set: e.employmentType }
+          : undefined,
+        companyName: e.companyName,
+        currentlyWorking: e.currentlyWorking || false,
+        startDate: new Date(e.startDate),
+        endDate: e.endDate ? new Date(e.endDate) : undefined,
+
+        location: e.location,
+        locationType: e.locationType ? { set: e.locationType } : undefined,
+        description: e.description,
+      },
+    })
+  );
+
+  const createPromises = toCreate.map((e) =>
+    prisma.experience.create({
+      data: {
+        title: e.title,
+        employmentType: e.employmentType,
+        companyName: e.companyName,
+        currentlyWorking: e.currentlyWorking || false,
+        startDate: new Date(e.startDate),
+        endDate: e.endDate ? new Date(e.endDate) : undefined,
+        location: e.location,
+        locationType: e.locationType,
+        description: e.description,
+        profileId,
+      },
+    })
+  );
+
+  await Promise.all([...updatePromises, ...createPromises]);
+
+  const updatedExperiences = await prisma.experience.findMany({
+    where: { profileId },
+    orderBy: { startDate: "desc" },
+  });
+
+  return updatedExperiences;
+}
+
 export {
   GetProfileService,
   ChangePasswordService,
@@ -299,4 +430,6 @@ export {
   UpdateUserProfileService,
   UpdateProfilePhotoService,
   UpdateResumeService,
+  UpdateBannerService,
+  UpdateExperiencesService,
 };

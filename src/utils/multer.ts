@@ -11,10 +11,10 @@ export function Multer() {
       file: Express.Multer.File,
       cb: FileFilterCallback
     ) {
-      if (file.fieldname === "photo") {
-        const allowed = ["image/jpeg", "image/png"];
+      if (file.fieldname === "photo" || file.fieldname === "banner") {
+        const allowed = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
         if (!allowed.includes(file.mimetype)) {
-          return cb(new MulterError("LIMIT_UNEXPECTED_FILE", "photo"));
+          return cb(new MulterError("LIMIT_UNEXPECTED_FILE", file.fieldname));
         }
         return cb(null, true);
       }

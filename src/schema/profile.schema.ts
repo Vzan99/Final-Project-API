@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { EmploymentType, LocationType } from "@prisma/client";
 
 export const updateProfileSchema = z.object({
   name: z.string().optional(),
@@ -27,4 +28,29 @@ export const changePasswordSchema = z.object({
     .regex(/[A-Z]/, "Must contain at least one uppercase letter")
     .regex(/[0-9]/, "Must contain at least one number")
     .regex(/[^A-Za-z0-9]/, "Must contain at least one special character"),
+});
+
+const experienceSchema = z.object({
+  id: z.string().optional(),
+  title: z.string(),
+  companyName: z.string(),
+  employmentType: z.enum([
+    "FULL_TIME",
+    "PART_TIME",
+    "CONTRACT",
+    "INTERNSHIP",
+    "TEMPORARY",
+    "VOLUNTEER",
+    "OTHER",
+  ]),
+  currentlyWorking: z.boolean().optional(),
+  startDate: z.string(),
+  endDate: z.string().optional(),
+  location: z.string().optional(),
+  locationType: z.enum(["REMOTE", "ON_SITE", "HYBRID"]),
+  description: z.string().optional(),
+});
+
+export const updateExperiencesSchema = z.object({
+  experiences: z.array(experienceSchema),
 });

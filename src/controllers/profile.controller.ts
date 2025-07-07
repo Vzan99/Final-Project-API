@@ -6,6 +6,8 @@ import {
   UpdateUserProfileService,
   UpdateProfilePhotoService,
   UpdateResumeService,
+  UpdateBannerService,
+  UpdateExperiencesService,
 } from "../services/profile.service";
 
 async function GetProfileController(
@@ -136,6 +138,52 @@ async function UpdateResumeController(
   }
 }
 
+async function UpdateBannerController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.user?.id;
+    const role = req.user?.role;
+    const file = req.file;
+
+    if (!userId || !role || !file)
+      throw new Error("User ID, role, and banner file are required");
+
+    const result = await UpdateBannerService(userId, role, file);
+
+    res.status(200).json({
+      message: result.message,
+      filename: result.filename,
+    });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+}
+
+async function UpdateExperiencesController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) throw new Error("Unauthorized");
+
+    const { experiences } = req.body;
+
+    const updated = await UpdateExperiencesService(userId, experiences);
+
+    res.status(200).json({
+      message: "Experiences updated successfully",
+      data: updated,
+    });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+}
+
 export {
   GetProfileController,
   ChangePasswordController,
@@ -143,4 +191,6 @@ export {
   UpdateProfileController,
   UpdateProfilePhotoController,
   UpdateResumeController,
+  UpdateBannerController,
+  UpdateExperiencesController,
 };

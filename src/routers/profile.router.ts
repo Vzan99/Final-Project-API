@@ -6,6 +6,8 @@ import {
   UpdateProfileController,
   UpdateProfilePhotoController,
   UpdateResumeController,
+  UpdateBannerController,
+  UpdateExperiencesController,
 } from "../controllers/profile.controller";
 import { VerifyToken } from "../middlewares/auth.middleware";
 import ReqValidator from "../middlewares/reqValidator.middleware";
@@ -13,6 +15,7 @@ import {
   updateProfileSchema,
   changePasswordSchema,
   changeEmailSchema,
+  updateExperiencesSchema,
 } from "../schema/profile.schema";
 import { Multer } from "../utils/multer";
 
@@ -53,6 +56,20 @@ router.put(
   VerifyToken,
   Multer().single("resume"),
   UpdateResumeController
+);
+
+router.put(
+  "/edit/banner",
+  VerifyToken,
+  Multer().single("banner"),
+  UpdateBannerController
+);
+
+router.put(
+  "/edit/experiences",
+  VerifyToken,
+  ReqValidator(updateExperiencesSchema),
+  UpdateExperiencesController
 );
 
 export default router;
