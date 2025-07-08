@@ -78,16 +78,25 @@ export async function getJobsByAdmin(
           status: status as JobStatus,
         }),
     },
-    orderBy: {
-      createdAt: sort,
-    },
+    orderBy: { createdAt: sort },
     skip,
     take: limit,
-    include: {
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      location: true,
+      salary: true,
+      deadline: true,
+      experienceLevel: true,
+      jobType: true,
+      bannerUrl: true, // ✅ pastikan ini disertakan
+      category: {
+        select: { name: true },
+      },
       _count: {
         select: { applications: true },
       },
-      category: true,
     },
   });
 
@@ -154,7 +163,7 @@ export async function updateJobById(
     throw new Error("Job not found or access denied");
   }
 
-  const { category, deadline, ...rest } = data;
+  const { category, deadline, bannerUrl, ...rest } = data;
 
   let categoryId: string | undefined = undefined;
 
@@ -176,8 +185,9 @@ export async function updateJobById(
     where: { id: jobId },
     data: {
       ...rest,
-      ...(categoryId && { categoryId }), // hanya tambahkan jika ada
+      ...(categoryId && { categoryId }),
       ...(deadline && { deadline: new Date(deadline) }),
+      ...(bannerUrl && { bannerUrl }), // ✅ update banner kalau ada
     },
   });
 
