@@ -151,10 +151,16 @@ export const getMySubscription = async (req: Request, res: Response) => {
   });
 
   if (!sub) {
-    return res.status(404).json({ message: "You have no subscriptions." });
+    return res.json({ status: "INACTIVE" });
   }
 
-  return res.json(sub);
+  const isActive =
+    sub.isApproved && sub.paymentStatus === "PAID" && sub.endDate >= new Date();
+
+  return res.json({
+    status: isActive ? "ACTIVE" : "INACTIVE",
+    expiredAt: sub.endDate,
+  });
 };
 
 export const getSubscriptionHistory = async (req: Request, res: Response) => {
