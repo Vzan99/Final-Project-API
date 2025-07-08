@@ -24,6 +24,15 @@ export async function getApplicantsByJob(jobId: string, adminId: string) {
               test: { jobId },
             },
           },
+          subscriptions: {
+            where: {
+              isApproved: true,
+              paymentStatus: "PAID",
+              endDate: { gte: new Date() },
+            },
+            orderBy: { endDate: "desc" },
+            take: 1,
+          },
         },
       },
     },
@@ -31,6 +40,7 @@ export async function getApplicantsByJob(jobId: string, adminId: string) {
 
   return applications.map((app) => {
     const test = app.user.preSelectionAnswers[0];
+    const subscription = app.user.subscriptions?.[0];
 
     return {
       id: app.id,
@@ -46,6 +56,7 @@ export async function getApplicantsByJob(jobId: string, adminId: string) {
       testScore: test?.score ?? null,
       passed: test?.passed ?? null,
       submittedAt: test?.createdAt ?? null,
+      subscriptionType: subscription?.type ?? null,
     };
   });
 }

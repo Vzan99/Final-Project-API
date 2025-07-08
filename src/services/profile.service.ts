@@ -51,6 +51,15 @@ async function GetProfileService(userId: string) {
             endDate: true,
           },
         },
+        assessments: {
+          select: {
+            id: true,
+            badge: true,
+            assessment: {
+              select: { name: true },
+            },
+          },
+        },
       },
     });
 
@@ -78,6 +87,7 @@ async function GetProfileService(userId: string) {
       isVerified: user.isVerified,
       certificates: user.certificates,
       subscription,
+      ssessments: user.assessments,
     };
 
     if (user.role === "USER") {
