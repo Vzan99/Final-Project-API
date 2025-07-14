@@ -23,7 +23,10 @@ export const updateJobSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   location: z.string().optional(),
-  salary: z.number().int().positive().optional(),
+  salary: z
+    .union([z.number().int().positive(), z.string().length(0)])
+    .transform((val) => (typeof val === "string" ? undefined : val))
+    .optional(),
   deadline: z
     .string()
     .refine((val) => !isNaN(Date.parse(val)), {
@@ -33,7 +36,7 @@ export const updateJobSchema = z.object({
   isRemote: z.boolean().optional(),
   experienceLevel: z.enum(["Entry", "Mid", "Senior"]).optional(),
   jobType: z.enum(["Full-time", "Part-time", "Contract"]).optional(),
-  tags: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional().default([]),
   bannerUrl: z.string().optional(),
   category: z.string().optional(),
   hasTest: z.boolean().optional().default(false),

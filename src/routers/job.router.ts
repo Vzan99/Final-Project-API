@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { Multer } from "../utils/multer";
 import ReqValidator from "../middlewares/reqValidator.middleware";
 import QueryValidator from "../middlewares/queryValidator.middleware";
 import { VerifyToken, AdminGuard } from "../middlewares/auth.middleware";
@@ -41,7 +42,7 @@ router.post(
   "/",
   VerifyToken,
   AdminGuard,
-  ReqValidator(createJobSchema),
+  Multer().single("banner"),
   createJobHandler
 );
 router.get("/", VerifyToken, AdminGuard, getJobsByAdminHandler);
@@ -50,7 +51,7 @@ router.patch(
   "/:id",
   VerifyToken,
   AdminGuard,
-  ReqValidator(updateJobSchema),
+  Multer().single("banner"),
   updateJobHandler
 );
 router.delete("/:id", VerifyToken, AdminGuard, deleteJobHandler);

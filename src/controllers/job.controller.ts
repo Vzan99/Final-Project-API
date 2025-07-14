@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { cloudinaryUpload } from "../utils/cloudinary";
 import {
   createJob,
   getJobsByAdmin,
@@ -16,6 +17,7 @@ import {
   GetSuggestedJobService,
 } from "../services/job.service";
 import type { JobFilters } from "../interfaces/jobs.interface";
+import { createJobSchema, updateJobSchema } from "../schema/job.schema";
 
 export async function createJobHandler(
   req: Request,
@@ -24,9 +26,30 @@ export async function createJobHandler(
 ) {
   try {
     const adminId = req.user!.id;
-    const data = req.body;
+    const raw = {
+      ...req.body,
+      salary: req.body.salary ? Number(req.body.salary) : undefined,
+      isRemote: req.body.isRemote === "true",
+      hasTest: req.body.hasTest === "true",
+      tags: req.body.tags
+        ? Array.isArray(req.body.tags)
+          ? req.body.tags
+          : [req.body.tags]
+        : [],
+    };
 
-    const job = await createJob(adminId, data);
+    const parsed = createJobSchema.parse(raw);
+
+    let bannerUrl = undefined;
+    if (req.file) {
+      const upload = await cloudinaryUpload(req.file, "image");
+      bannerUrl = upload.secure_url;
+    }
+
+    const job = await createJob(adminId, {
+      ...parsed,
+      bannerUrl,
+    });
 
     res.status(201).json({
       success: true,
@@ -91,7 +114,8 @@ export async function getJobDetailHandler(
   next: NextFunction
 ) {
   try {
-    const jobId = req.params.id;
+    const rawId = req.params.id;
+    const jobId = rawId.slice(0, 36);
     const adminId = req.user!.id;
 
     const job = await getJobDetailById(jobId, adminId);
@@ -113,15 +137,35 @@ export async function updateJobHandler(
   try {
     const jobId = req.params.id;
     const adminId = req.user!.id;
-    const data = req.body;
 
-    const updated = await updateJobById(jobId, adminId, data);
+    let raw =
+      typeof req.body.data === "string" ? JSON.parse(req.body.data) : req.body;
+
+    const parsed = {
+      ...raw,
+      salary: raw.salary ? Number(raw.salary) : undefined,
+      isRemote: raw.isRemote === "true" || raw.isRemote === true,
+      hasTest: raw.hasTest === "true" || raw.hasTest === true,
+      tags: Array.isArray(raw.tags) ? raw.tags : raw.tags ? [raw.tags] : [],
+    };
+
+    let bannerUrl: string | undefined;
+    if (req.file) {
+      const uploaded = await cloudinaryUpload(req.file, "image");
+      bannerUrl = uploaded.secure_url;
+    }
+
+    const updated = await updateJobById(jobId, adminId, {
+      ...parsed,
+      ...(bannerUrl && { bannerUrl }),
+    });
 
     res.status(200).json({
       success: true,
       message: "Job updated successfully",
       data: updated,
     });
+    return;
   } catch (err) {
     next(err);
   }
