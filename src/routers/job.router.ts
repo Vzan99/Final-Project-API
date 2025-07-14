@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { Multer } from "../utils/multer";
 import ReqValidator from "../middlewares/reqValidator.middleware";
+import QueryValidator from "../middlewares/queryValidator.middleware";
 import { VerifyToken, AdminGuard } from "../middlewares/auth.middleware";
 import {
   createJobHandler,
@@ -9,10 +10,33 @@ import {
   updateJobHandler,
   deleteJobHandler,
   updateJobStatusHandler,
+  getJobsHandler,
+  getAllCategoriesHandler,
+  getSavedJobsController,
+  checkIsJobSavedHandler,
+  saveJobHandler,
+  removeSavedJobHandler,
+  getJobFiltersMetaHandler,
+  GetSuggestedJobsController,
 } from "../controllers/job.controller";
-import { publishJobSchema } from "../schema/job.schema";
+import {
+  createJobSchema,
+  updateJobSchema,
+  publishJobSchema,
+  jobFiltersSchema,
+} from "../schema/job.schema";
 
 const router = Router();
+
+router.get("/public", QueryValidator(jobFiltersSchema), getJobsHandler);
+
+router.get("/categories", getAllCategoriesHandler);
+
+router.get("/filters/meta", getJobFiltersMetaHandler);
+
+router.get("/saved", VerifyToken, getSavedJobsController);
+
+router.get("/company/:companyId/suggestions", GetSuggestedJobsController);
 
 router.post(
   "/",
@@ -38,5 +62,11 @@ router.patch(
   ReqValidator(publishJobSchema),
   updateJobStatusHandler
 );
+
+router.get("/:id/is-saved", VerifyToken, checkIsJobSavedHandler);
+
+router.post("/:id/save", VerifyToken, saveJobHandler);
+
+router.delete("/:id/save", VerifyToken, removeSavedJobHandler);
 
 export default router;

@@ -8,6 +8,7 @@ import {
   UpdateResumeService,
   UpdateBannerService,
   UpdateExperiencesService,
+  UpdateCompanyProfileService,
 } from "../services/profile.service";
 
 async function GetProfileController(
@@ -184,6 +185,26 @@ async function UpdateExperiencesController(
   }
 }
 
+async function UpdateCompanyProfileController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) throw new Error("Unauthorized");
+
+    const company = await UpdateCompanyProfileService(userId, req.body);
+
+    res.status(200).json({
+      message: "Company profile updated successfully",
+      data: company,
+    });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+}
+
 export {
   GetProfileController,
   ChangePasswordController,
@@ -193,4 +214,5 @@ export {
   UpdateResumeController,
   UpdateBannerController,
   UpdateExperiencesController,
+  UpdateCompanyProfileController,
 };

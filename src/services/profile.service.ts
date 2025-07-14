@@ -25,7 +25,11 @@ async function GetProfileService(userId: string) {
         phone: true,
         role: true,
         isVerified: true,
-        profile: true,
+        profile: {
+          include: {
+            experiences: true,
+          },
+        },
         company: true,
         certificates: {
           select: {
@@ -250,30 +254,72 @@ async function UpdateProfilePhotoService(
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
+        role: true,
         profile: { select: { photoUrl: true } },
+        company: { select: { logo: true } },
       },
     });
 
-    const oldPhoto = user?.profile?.photoUrl;
+    if (!user) throw new Error("User not found");
 
     const uploadRes = await cloudinaryUpload(file);
-
     const fullFilename = `${uploadRes.public_id}.${uploadRes.format}`;
 
-    if (oldPhoto) {
-      const oldPublicId = oldPhoto.split(".")[0];
-      await cloudinaryRemove(oldPublicId);
+    if (user.role === "USER") {
+      const oldPhoto = user.profile?.photoUrl;
+      if (oldPhoto) {
+        const oldPublicId = oldPhoto.split(".")[0];
+        await cloudinaryRemove(oldPublicId);
+      }
+
+      await prisma.profile.upsert({
+        where: { userId },
+        update: { photoUrl: fullFilename },
+        create: {
+          userId,
+          photoUrl: fullFilename,
+          bannerUrl: null,
+          resumeUrl: null,
+          birthDate: new Date(),
+          gender: "Not specified",
+          education: "",
+          address: "",
+          skills: [],
+        },
+      });
+
+      return { message: "User profile photo updated", filename: fullFilename };
     }
 
-    await prisma.profile.update({
-      where: { userId },
-      data: { photoUrl: fullFilename },
-    });
+    if (user.role === "ADMIN") {
+      const oldLogo = user.company?.logo;
+      if (oldLogo) {
+        const oldPublicId = oldLogo.split(".")[0];
+        await cloudinaryRemove(oldPublicId);
+      }
 
-    return { message: "Photo updated successfully", filename: fullFilename };
+      await prisma.company.upsert({
+        where: { adminId: userId },
+        update: { logo: fullFilename },
+        create: {
+          adminId: userId,
+          logo: fullFilename,
+          description: "",
+          location: "",
+          bannerUrl: null,
+          website: null,
+          industry: null,
+          foundedYear: null,
+        },
+      });
+
+      return { message: "Company logo updated", filename: fullFilename };
+    }
+
+    throw new Error("Unsupported role");
   } catch (err) {
     throw new Error(
-      "Failed to update profile photo: " + (err as Error).message
+      "Failed to update profile photo/logo: " + (err as Error).message
     );
   }
 }
@@ -433,6 +479,63 @@ async function UpdateExperiencesService(
   return updatedExperiences;
 }
 
+async function UpdateCompanyProfileService(
+  userId: string,
+  input: {
+    companyName?: string;
+    description?: string;
+    location?: string;
+    website?: string;
+    industry?: string;
+    foundedYear?: number | null;
+  }
+) {
+  try {
+    const {
+      companyName,
+      description,
+      location,
+      website,
+      industry,
+      foundedYear,
+    } = input;
+
+    if (companyName) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { name: companyName },
+      });
+    }
+
+    const company = await prisma.company.upsert({
+      where: { adminId: userId },
+      update: {
+        description,
+        location,
+        website,
+        industry,
+        foundedYear,
+      },
+      create: {
+        adminId: userId,
+        description: description || "",
+        location: location || "",
+        website: website || null,
+        industry: industry || null,
+        foundedYear: foundedYear || null,
+        logo: null,
+        bannerUrl: null,
+      },
+    });
+
+    return company;
+  } catch (error) {
+    throw new Error(
+      "Failed to update company profile: " + (error as Error).message
+    );
+  }
+}
+
 export {
   GetProfileService,
   ChangePasswordService,
@@ -442,4 +545,5 @@ export {
   UpdateResumeService,
   UpdateBannerService,
   UpdateExperiencesService,
+  UpdateCompanyProfileService,
 };

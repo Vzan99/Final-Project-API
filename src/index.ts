@@ -19,6 +19,7 @@ import AnalyticsRouter from "./routers/analytics.router";
 import assessmentRouter from "./routers/assessment.router";
 import certificateRouter from "./routers/certificate.router";
 import ReviewRouter from "./routers/review.router";
+import CompaniesRouter from "./routers/company.router";
 
 // ─── Cron Jobs ────────────────────────────────────────────
 import { initSubscriptionCron } from "./lib/subscriptionCron";
@@ -66,6 +67,9 @@ app.use("/certificates", certificateRouter);
 
 // ─── Analytics ────────────────────────────────────────────
 app.use("/analytics", AnalyticsRouter);
+
+// ─── Companies ────────────────────────────────────────────
+app.use("/companies", CompaniesRouter);
 
 // ─── Server Start ─────────────────────────────────────────
 app.listen(port, () => {

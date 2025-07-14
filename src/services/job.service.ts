@@ -5,6 +5,12 @@ import {
   UpdateJobInput,
   PublishJobInput,
 } from "../schema/job.schema";
+import {
+  PaginatedJobs,
+  JobFilters,
+  JobWithRelations,
+} from "../interfaces/jobs.interface";
+import { EmploymentType, LocationType } from "@prisma/client";
 
 export async function createJob(adminId: string, data: CreateJobInput) {
   const company = await prisma.company.findUnique({
@@ -241,4 +247,228 @@ export async function updateJobStatus(
   });
 
   return updated;
+}
+
+export async function getJobsWithFilters(
+  filters: JobFilters
+): Promise<PaginatedJobs> {
+  const {
+    title,
+    location,
+    jobType,
+    isRemote,
+    salaryMin,
+    salaryMax,
+    experienceLevel,
+    page = 1,
+    pageSize = 10,
+    sortBy = "createdAt",
+    sortOrder = "desc",
+  } = filters;
+
+  const skip = (page - 1) * pageSize;
+
+  const andFilters: any[] = [];
+
+  if (title) {
+    andFilters.push({
+      title: { contains: title, mode: "insensitive" },
+    });
+  }
+
+  if (location) {
+    andFilters.push({
+      location: { contains: location, mode: "insensitive" },
+    });
+  }
+
+  if (jobType) andFilters.push({ jobType });
+  if (typeof isRemote === "boolean") andFilters.push({ isRemote });
+  if (salaryMin !== undefined) andFilters.push({ salary: { gte: salaryMin } });
+  if (salaryMax !== undefined) andFilters.push({ salary: { lte: salaryMax } });
+  if (experienceLevel) {
+    andFilters.push({
+      experienceLevel: { contains: experienceLevel, mode: "insensitive" },
+    });
+  }
+
+  const allowedSortBy = ["createdAt", "salary"];
+  const allowedSortOrder = ["asc", "desc"];
+  const sortField = allowedSortBy.includes(sortBy) ? sortBy : "createdAt";
+  const sortDir = allowedSortOrder.includes(sortOrder) ? sortOrder : "desc";
+
+  const where = andFilters.length > 0 ? { AND: andFilters } : {};
+
+  const [total, jobs] = await Promise.all([
+    prisma.job.count({ where }),
+    prisma.job.findMany({
+      where,
+      orderBy: { [sortField]: sortDir },
+      skip,
+      take: pageSize,
+      include: {
+        company: {
+          include: {
+            admin: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        category: true,
+      },
+    }),
+  ]);
+
+  return { total, jobs };
+}
+
+export async function getAllCategories() {
+  return await prisma.category.findMany({
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+}
+
+export async function getSavedJobsByUser(
+  userId: string
+): Promise<JobWithRelations[]> {
+  const savedJobs = await prisma.savedJob.findMany({
+    where: { userId },
+    include: {
+      job: {
+        include: {
+          company: {
+            include: {
+              admin: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return savedJobs.map((saved) => saved.job);
+}
+
+export async function isJobSavedByUser(
+  userId: string,
+  jobId: string
+): Promise<boolean> {
+  const savedJob = await prisma.savedJob.findUnique({
+    where: {
+      userId_jobId: {
+        userId,
+        jobId,
+      },
+    },
+  });
+
+  return savedJob !== null;
+}
+
+export async function saveJobService(userId: string, jobId: string) {
+  const jobExists = await prisma.job.findUnique({
+    where: { id: jobId },
+    select: { id: true },
+  });
+
+  if (!jobExists) {
+    throw new Error("Job not found");
+  }
+
+  const alreadySaved = await prisma.savedJob.findUnique({
+    where: {
+      userId_jobId: {
+        userId,
+        jobId,
+      },
+    },
+  });
+
+  if (alreadySaved) {
+    throw new Error("Job already saved");
+  }
+
+  return prisma.savedJob.create({
+    data: {
+      userId,
+      jobId,
+    },
+  });
+}
+
+export async function removeSavedJob(userId: string, jobId: string) {
+  const existing = await prisma.savedJob.findUnique({
+    where: {
+      userId_jobId: {
+        userId,
+        jobId,
+      },
+    },
+  });
+
+  if (!existing) {
+    throw new Error("Saved job not found.");
+  }
+
+  await prisma.savedJob.delete({
+    where: {
+      userId_jobId: {
+        userId,
+        jobId,
+      },
+    },
+  });
+}
+
+export async function getJobFiltersMetaService() {
+  const categories = await prisma.category.findMany({
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+
+  const employmentTypes = Object.values(EmploymentType);
+  const locationTypes = Object.values(LocationType);
+
+  const jobTypesRaw = await prisma.job.findMany({
+    distinct: ["jobType"],
+    select: { jobType: true },
+  });
+
+  const jobTypes = jobTypesRaw.map((j) => j.jobType);
+
+  return {
+    employmentTypes,
+    locationTypes,
+    jobTypes,
+    categories,
+  };
+}
+
+export async function GetSuggestedJobService(
+  companyId: string,
+  excludeJobId?: string
+) {
+  return await prisma.job.findMany({
+    where: {
+      companyId,
+      id: excludeJobId ? { not: excludeJobId } : undefined,
+      status: "PUBLISHED",
+    },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+    include: {
+      company: {
+        include: { admin: true },
+      },
+    },
+  });
 }

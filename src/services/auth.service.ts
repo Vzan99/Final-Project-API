@@ -360,7 +360,6 @@ async function ResetPasswordService(token: string, newPassword: string) {
 async function VerifyNewEmailService(token: string) {
   if (!SECRET_KEY) throw new Error("Missing SECRET_KEY");
 
-  // decode and validate
   let payload: { userId: string; newEmail: string };
   try {
     payload = verify(token, SECRET_KEY) as any;
@@ -368,7 +367,6 @@ async function VerifyNewEmailService(token: string) {
     throw new Error("Invalid or expired token");
   }
 
-  // fetch record
   const record = await prisma.verificationToken.findUnique({
     where: { token },
   });
@@ -378,13 +376,11 @@ async function VerifyNewEmailService(token: string) {
     throw new Error("Token has expired");
   }
 
-  // update user email + mark verified
   await prisma.user.update({
     where: { id: payload.userId },
     data: { email: payload.newEmail, isVerified: true },
   });
 
-  // cleanup
   await prisma.verificationToken.delete({ where: { token } });
 
   return { message: "Your email has been updated successfully." };
