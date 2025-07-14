@@ -6,7 +6,16 @@ import {
   updateJobById,
   deleteJobById,
   updateJobStatus,
+  getJobsWithFilters,
+  getAllCategories,
+  getSavedJobsByUser,
+  isJobSavedByUser,
+  saveJobService,
+  removeSavedJob,
+  getJobFiltersMetaService,
+  GetSuggestedJobService,
 } from "../services/job.service";
+import type { JobFilters } from "../interfaces/jobs.interface";
 
 export async function createJobHandler(
   req: Request,
@@ -156,6 +165,163 @@ export async function updateJobStatusHandler(
       message: "Job status updated",
       data: updated,
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getJobsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const filters: JobFilters = (req as any).validatedQuery;
+
+    const data = await getJobsWithFilters(filters);
+
+    res.status(200).json({
+      success: true,
+      total: data.total,
+      jobs: data.jobs,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getAllCategoriesHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const categories = await getAllCategories();
+
+    res.status(200).json({
+      success: true,
+      message: "Categories fetched successfully",
+      data: categories,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getSavedJobsController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
+    const savedJobs = await getSavedJobsByUser(userId);
+    res.status(200).json(savedJobs);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+}
+
+export async function checkIsJobSavedHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.user?.id;
+    const jobId = req.params.id;
+
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
+    if (!jobId) {
+      throw new Error("Job ID is required");
+    }
+
+    const isSaved = await isJobSavedByUser(userId, jobId);
+
+    res.status(200).json({ isSaved });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+}
+
+export async function saveJobHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.user?.id;
+    const jobId = req.params.id;
+
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+    if (!jobId) throw new Error("Job ID is required");
+
+    await saveJobService(userId, jobId);
+
+    res.json({ success: true, message: "Job saved successfully" });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+}
+
+export async function removeSavedJobHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = (req as any).user.id;
+    const jobId = req.params.id;
+
+    if (!jobId) {
+      throw new Error("Job ID is required.");
+    }
+
+    await removeSavedJob(userId, jobId);
+
+    res.json({ success: true, message: "Job removed from saved list." });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+}
+
+export async function getJobFiltersMetaHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const meta = await getJobFiltersMetaService();
+    res.status(200).json({ success: true, data: meta });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+}
+
+export async function GetSuggestedJobsController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { companyId } = req.params;
+    const excludeJobId = req.query.excludeJobId as string | undefined;
+
+    if (!companyId) {
+      throw new Error("Company ID is required");
+    }
+
+    const jobs = await GetSuggestedJobService(companyId, excludeJobId);
+    res.status(200).json(jobs);
   } catch (err) {
     next(err);
   }

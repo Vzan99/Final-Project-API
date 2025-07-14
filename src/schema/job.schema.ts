@@ -46,3 +46,69 @@ export const publishJobSchema = z.object({
 });
 
 export type PublishJobInput = z.infer<typeof publishJobSchema>;
+
+export const jobFiltersSchema = z.object({
+  title: z.string().optional(),
+  location: z.string().optional(),
+  jobType: z.string().optional(),
+  isRemote: z
+    .string()
+    .optional()
+    .transform((val) => {
+      if (val === "true") return true;
+      if (val === "false") return false;
+      return undefined;
+    }),
+  salaryMin: z
+    .string()
+    .optional()
+    .refine((val) => !val || !isNaN(Number(val)), {
+      message: "salaryMin must be a number",
+    })
+    .transform((val) => (val ? Number(val) : undefined)),
+  salaryMax: z
+    .string()
+    .optional()
+    .refine((val) => !val || !isNaN(Number(val)), {
+      message: "salaryMax must be a number",
+    })
+    .transform((val) => (val ? Number(val) : undefined)),
+  experienceLevel: z.string().optional(),
+  page: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || (Number(val) > 0 && Number.isInteger(Number(val))),
+      {
+        message: "page must be a positive integer",
+      }
+    )
+    .transform((val) => (val ? Number(val) : 1)),
+  pageSize: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || (Number(val) > 0 && Number.isInteger(Number(val))),
+      {
+        message: "pageSize must be a positive integer",
+      }
+    )
+    .transform((val) => (val ? Number(val) : 10)),
+  sortBy: z.enum(["createdAt", "salary", "relevance"]).optional(),
+  sortOrder: z.enum(["asc", "desc"]).optional(),
+  lat: z
+    .string()
+    .optional()
+    .refine((val) => !val || !isNaN(Number(val)), {
+      message: "lat must be a number",
+    })
+    .transform((val) => (val ? Number(val) : undefined)),
+
+  lng: z
+    .string()
+    .optional()
+    .refine((val) => !val || !isNaN(Number(val)), {
+      message: "lng must be a number",
+    })
+    .transform((val) => (val ? Number(val) : undefined)),
+});

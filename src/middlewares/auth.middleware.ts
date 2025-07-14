@@ -4,6 +4,7 @@ import { SECRET_KEY } from "../config";
 import { IUserReqParam } from "../types/express";
 import prisma from "../lib/prisma";
 import { SubscriptionType } from "@prisma/client";
+import { Role } from "@prisma/client";
 
 // Token verification
 export async function VerifyToken(
@@ -35,7 +36,7 @@ export async function VerifyToken(
 
 // Role guards
 export const UserGuard = (req: Request, res: Response, next: NextFunction) => {
-  if (req.user?.role !== "USER") {
+  if (req.user?.role !== Role.USER) {
     res.status(403).json({ message: "Access restricted: User only" });
     return;
   }
@@ -43,7 +44,7 @@ export const UserGuard = (req: Request, res: Response, next: NextFunction) => {
 };
 
 export const AdminGuard = (req: Request, res: Response, next: NextFunction) => {
-  if (req.user?.role !== "ADMIN") {
+  if (req.user?.role !== Role.ADMIN) {
     res.status(403).json({ message: "Access restricted: Admin only" });
     return;
   }
@@ -55,7 +56,7 @@ export const DeveloperGuard = (
   res: Response,
   next: NextFunction
 ) => {
-  if (req.user?.role !== "DEVELOPER") {
+  if (req.user?.role !== Role.DEVELOPER) {
     res.status(403).json({ message: "Access restricted: Developer only" });
     return;
   }
