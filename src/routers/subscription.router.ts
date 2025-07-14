@@ -7,6 +7,8 @@ import {
   getMySubscription,
   getSubscriptionAnalytics,
   getSubscriptionHistory,
+  createMidtransTransaction,
+  midtransWebhookHandler,
 } from "../controllers/subscription.controller";
 import {
   VerifyToken,
@@ -21,7 +23,6 @@ const router = Router();
 
 // Developer-only Routes
 router.use("/developer", VerifyToken, DeveloperGuard);
-
 router.get("/developer", asyncHandler(getSubscriptions));
 router.patch("/developer/:id/approve", asyncHandler(approveSubscription));
 router.get("/developer/analytics", asyncHandler(getSubscriptionAnalytics));
@@ -47,5 +48,14 @@ router.post(
   upload.single("paymentProof"),
   asyncHandler(subscribe)
 );
+router.post(
+  "/user/midtrans/token",
+  VerifyToken,
+  UserGuard,
+  asyncHandler(createMidtransTransaction)
+);
+
+// Midtrans webhook (no token)
+router.post("/webhook/midtrans", asyncHandler(midtransWebhookHandler));
 
 export default router;

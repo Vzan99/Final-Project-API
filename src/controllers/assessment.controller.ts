@@ -42,6 +42,16 @@ export const getAssessmentResultHandler = asyncHandler(
     const userId = req.user!.id;
     const { id } = req.params;
     const result = await getAssessmentResult(id, userId);
+
+    if (!result) {
+      return res
+        .status(404)
+        .json({
+          message:
+            "Result not found. User may not have submitted this assessment.",
+        });
+    }
+
     res.json(result);
   }
 );

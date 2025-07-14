@@ -4,7 +4,7 @@ import QRCode from "qrcode";
 
 type Question = {
   question: string;
-  choices: string[];
+  options: string[];
   answer: number;
 };
 
@@ -60,20 +60,25 @@ export const submitAssessment = async (
 
   const questions = assessment.questions as Question[];
 
-  // Validate answers length
-  if (userAnswers.length !== questions.length) {
+  if (!Array.isArray(questions) || userAnswers.length !== questions.length) {
     throw new Error("Invalid number of answers");
   }
 
-  // Evaluate score
   let correct = 0;
   questions.forEach((q, idx) => {
-    const correctChoice = q.choices[q.answer];
-    if (userAnswers[idx] === correctChoice) correct++;
+    if (
+      Array.isArray(q.options) &&
+      typeof q.answer === "number" &&
+      q.answer >= 0 &&
+      q.answer < q.options.length
+    ) {
+      const correctOption = q.options[q.answer];
+      if (userAnswers[idx] === correctOption) correct++;
+    }
   });
 
   const score = Math.round((correct / questions.length) * 100);
-  const passed = score >= assessment.passingScore;
+  const passed = score >= (assessment.passingScore ?? 75);
 
   const result = await prisma.userAssessment.create({
     data: {
@@ -86,23 +91,25 @@ export const submitAssessment = async (
     },
   });
 
-  // Auto generate certificate if passed
   if (passed) {
-    const verificationCode = uuidv4();
-    const verificationUrl = `${process.env.FE_URL}/certificate/verify/${verificationCode}`;
-    const qrCodeDataUrl = await QRCode.toDataURL(verificationUrl);
+    try {
+      const verificationCode = uuidv4();
+      const feUrl = process.env.FE_URL || "http://localhost:3000";
+      const verificationUrl = `${feUrl}/certificate/verify/${verificationCode}`;
+      const qrCodeDataUrl = await QRCode.toDataURL(verificationUrl);
 
-    const certificateUrl = `https://dummy-certificate-server.com/cert/${result.id}.pdf`; // replace with actual if needed
+      const certificateUrl = `https://dummy-certificate-server.com/cert/${result.id}.pdf`;
 
-    await prisma.certificate.create({
-      data: {
-        userId,
-        assessmentId,
-        verificationCode,
-        certificateUrl,
-        qrCodeUrl: qrCodeDataUrl,
-      },
-    });
+      await prisma.certificate.create({
+        data: {
+          userId,
+          assessmentId,
+          verificationCode,
+          certificateUrl,
+          qrCodeUrl: qrCodeDataUrl,
+        },
+      });
+    } catch (_) {}
   }
 
   return result;
