@@ -4,6 +4,7 @@ import {
   getPreSelectionTestByJob,
   submitPreSelectionAnswer,
   getApplicantsWithTestResult,
+  checkPreSelectionStatus,
 } from "../services/preTest.service";
 
 export async function createPreSelectionTestHandler(
@@ -66,6 +67,23 @@ export async function getApplicantsWithTestResultHandler(
     const result = await getApplicantsWithTestResult(jobId);
 
     res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getPreSelectionStatusHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const jobId = req.params.jobId;
+    const userId = req.user!.id;
+
+    const result = await checkPreSelectionStatus(jobId, userId);
+
+    res.json({ success: true, data: result });
   } catch (err) {
     next(err);
   }

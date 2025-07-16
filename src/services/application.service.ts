@@ -44,6 +44,7 @@ export async function getApplicantsByJob(jobId: string, adminId: string) {
 
     return {
       id: app.id,
+      userId: app.user.id,
       name: app.user.name,
       email: app.user.email,
       photoUrl: app.user.profile?.photoUrl ?? null,
@@ -104,6 +105,7 @@ export async function getApplicationDetail(
     appliedAt: application.createdAt,
 
     user: {
+      id: application.user.id,
       name: application.user.name,
       email: application.user.email,
       profile: application.user.profile,
