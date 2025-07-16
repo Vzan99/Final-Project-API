@@ -96,7 +96,7 @@ export async function submitPreSelectionAnswer(
     data: {
       userId,
       testId: test.id,
-      score,
+      score: percentage,
       passed,
       answers: userAnswers,
     },
@@ -148,4 +148,36 @@ export async function getApplicantsWithTestResult(jobId: string) {
       submittedAt: test?.createdAt ?? null,
     };
   });
+}
+
+export async function checkPreSelectionStatus(jobId: string, userId: string) {
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    include: { preSelectionTest: true },
+  });
+
+  if (!job || !job.hasTest || !job.preSelectionTest) {
+    return { submitted: false };
+  }
+
+  const testId = job.preSelectionTest.id;
+
+  const answer = await prisma.preSelectionAnswer.findUnique({
+    where: {
+      userId_testId: {
+        userId,
+        testId,
+      },
+    },
+  });
+
+  if (!answer) return { submitted: false };
+
+  return {
+    submitted: true,
+    score: answer.score,
+    passed: answer.passed,
+    total: 25,
+    submittedAt: answer.createdAt,
+  };
 }

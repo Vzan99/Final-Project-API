@@ -6,6 +6,7 @@ import {
   getPreSelectionTestByJobHandler,
   submitPreSelectionAnswerHandler,
   getApplicantsWithTestResultHandler,
+  getPreSelectionStatusHandler,
 } from "../controllers/preTest.controller";
 import {
   createPreSelectionTestSchema,
@@ -40,6 +41,12 @@ router.get(
   VerifyToken,
   AdminGuard,
   getApplicantsWithTestResultHandler
+);
+
+router.get(
+  "/:jobId/pre-selection-submitted",
+  VerifyToken,
+  getPreSelectionStatusHandler
 );
 
 export default router;

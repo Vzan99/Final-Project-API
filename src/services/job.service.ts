@@ -4,6 +4,7 @@ import {
   CreateJobInput,
   UpdateJobInput,
   PublishJobInput,
+  ApplyJobInput,
 } from "../schema/job.schema";
 import {
   PaginatedJobs,
@@ -471,4 +472,51 @@ export async function GetSuggestedJobService(
       },
     },
   });
+}
+
+export async function applyJob(
+  jobId: string,
+  userId: string,
+  data: ApplyJobInput
+) {
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    include: { preSelectionTest: true },
+  });
+
+  if (!job) throw new Error("Job not found");
+
+  const existing = await prisma.application.findFirst({
+    where: { jobId, userId },
+  });
+  if (existing) throw new Error("You have already applied to this job");
+
+  let testScore: number | undefined = undefined;
+  if (job.hasTest && job.preSelectionTest) {
+    const answer = await prisma.preSelectionAnswer.findUnique({
+      where: {
+        userId_testId: {
+          userId,
+          testId: job.preSelectionTest.id,
+        },
+      },
+    });
+
+    if (!answer)
+      throw new Error("Please complete the pre-selection test before applying");
+    testScore = answer.score;
+  }
+
+  const newApp = await prisma.application.create({
+    data: {
+      jobId,
+      userId,
+      expectedSalary: data.expectedSalary,
+      cvFile: data.cvFile,
+      coverLetter: data.coverLetter,
+      testScore,
+    },
+  });
+
+  return newApp;
 }

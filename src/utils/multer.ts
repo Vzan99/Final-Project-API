@@ -28,6 +28,10 @@ export function Multer() {
           "application/pdf",
           "application/msword",
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "image/jpeg",
+          "image/png",
+          "image/jpg",
+          "image/webp",
         ];
         if (!allowedDocs.includes(file.mimetype)) {
           return cb(new MulterError("LIMIT_UNEXPECTED_FILE", "resume"));

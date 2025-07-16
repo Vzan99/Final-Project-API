@@ -15,9 +15,10 @@ import {
   removeSavedJob,
   getJobFiltersMetaService,
   GetSuggestedJobService,
+  applyJob,
 } from "../services/job.service";
 import type { JobFilters } from "../interfaces/jobs.interface";
-import { createJobSchema, updateJobSchema } from "../schema/job.schema";
+import { createJobSchema, applyJobSchema } from "../schema/job.schema";
 
 export async function createJobHandler(
   req: Request,
@@ -366,6 +367,50 @@ export async function GetSuggestedJobsController(
 
     const jobs = await GetSuggestedJobService(companyId, excludeJobId);
     res.status(200).json(jobs);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function applyJobHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const jobId = req.params.jobId;
+    const userId = req.user!.id;
+
+    const { expectedSalary, coverLetter } = req.body;
+
+    const parsed = applyJobSchema.safeParse({
+      expectedSalary: Number(expectedSalary),
+      cvFile: "placeholder", // hanya supaya schema lolos
+      coverLetter,
+    });
+
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten().fieldErrors });
+      return;
+    }
+
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ error: "Resume (CV) file is required" });
+      return;
+    }
+
+    // Upload ke Cloudinary
+    const result = await cloudinaryUpload(file, "raw");
+    const cvFileUrl = result.secure_url;
+
+    const application = await applyJob(jobId, userId, {
+      expectedSalary: parsed.data.expectedSalary,
+      coverLetter,
+      cvFile: cvFileUrl,
+    });
+
+    res.status(201).json({ success: true, data: application });
   } catch (err) {
     next(err);
   }

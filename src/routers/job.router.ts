@@ -18,6 +18,7 @@ import {
   removeSavedJobHandler,
   getJobFiltersMetaHandler,
   GetSuggestedJobsController,
+  applyJobHandler,
 } from "../controllers/job.controller";
 import {
   createJobSchema,
@@ -47,6 +48,7 @@ router.post(
 );
 router.get("/", VerifyToken, AdminGuard, getJobsByAdminHandler);
 router.get("/:id", VerifyToken, AdminGuard, getJobDetailHandler);
+
 router.patch(
   "/:id",
   VerifyToken,
@@ -68,5 +70,12 @@ router.get("/:id/is-saved", VerifyToken, checkIsJobSavedHandler);
 router.post("/:id/save", VerifyToken, saveJobHandler);
 
 router.delete("/:id/save", VerifyToken, removeSavedJobHandler);
+
+router.post(
+  "/:jobId/apply",
+  VerifyToken,
+  Multer().single("resume"), // fieldname = resume
+  applyJobHandler
+);
 
 export default router;

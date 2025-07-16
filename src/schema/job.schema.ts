@@ -115,3 +115,14 @@ export const jobFiltersSchema = z.object({
     })
     .transform((val) => (val ? Number(val) : undefined)),
 });
+
+export const applyJobSchema = z.object({
+  expectedSalary: z
+    .number({ required_error: "Expected salary is required" })
+    .min(1, "Expected salary must be greater than 0"),
+  coverLetter: z.string().optional(),
+});
+
+export type ApplyJobInput = z.infer<typeof applyJobSchema> & {
+  cvFile: string;
+};
