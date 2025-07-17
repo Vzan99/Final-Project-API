@@ -63,6 +63,13 @@ router.patch(
   updateJobStatusHandler
 );
 
+// router.post(
+//   "/:id/apply",
+//   VerifyToken,
+//   Multer().single("cvFile"),
+//   applyToJobController
+// );
+
 router.get("/:id/is-saved", VerifyToken, checkIsJobSavedHandler);
 
 router.post("/:id/save", VerifyToken, saveJobHandler);

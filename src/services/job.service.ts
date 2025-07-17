@@ -297,7 +297,12 @@ export async function getJobsWithFilters(
   const sortField = allowedSortBy.includes(sortBy) ? sortBy : "createdAt";
   const sortDir = allowedSortOrder.includes(sortOrder) ? sortOrder : "desc";
 
-  const where = andFilters.length > 0 ? { AND: andFilters } : {};
+  const where = {
+    AND: [
+      ...(andFilters.length > 0 ? andFilters : []),
+      { status: "PUBLISHED" },
+    ],
+  };
 
   const [total, jobs] = await Promise.all([
     prisma.job.count({ where }),
