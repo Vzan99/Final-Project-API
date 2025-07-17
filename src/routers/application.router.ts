@@ -5,8 +5,12 @@ import {
   getApplicantsByJobHandler,
   getApplicationDetailHandler,
   updateApplicationStatusHandler,
+  applyToJobController,
 } from "../controllers/application.controller";
-import { updateApplicationStatusSchema } from "../schema/application.schema";
+import {
+  updateApplicationStatusSchema,
+  ApplyJobSchema,
+} from "../schema/application.schema";
 
 const router = Router();
 
@@ -23,6 +27,13 @@ router.patch(
   AdminGuard,
   ReqValidator(updateApplicationStatusSchema),
   updateApplicationStatusHandler
+);
+
+router.post(
+  "/apply/:jobId",
+  VerifyToken,
+  ReqValidator(ApplyJobSchema),
+  applyToJobController
 );
 
 export default router;

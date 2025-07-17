@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import {
   GetAllCompaniesService,
   getCompanyByIdService,
+  getPublishedJobsByCompanyIdService,
 } from "../services/company.service";
 
 export async function GetAllCompaniesController(
@@ -51,5 +52,33 @@ export async function getCompanyByIdController(
     res.status(200).json(company);
   } catch (err) {
     next(err);
+  }
+}
+
+export async function getPublishedJobsByCompanyIdController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { id: companyId } = req.params;
+
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 5;
+
+    const { jobs, total } = await getPublishedJobsByCompanyIdService(
+      companyId,
+      page,
+      pageSize
+    );
+
+    res.status(200).json({
+      jobs,
+      total,
+      page,
+      totalPages: Math.ceil(total / pageSize),
+    });
+  } catch (error) {
+    next(error);
   }
 }

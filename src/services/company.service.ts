@@ -87,3 +87,43 @@ export async function getCompanyByIdService(companyId: string) {
     },
   });
 }
+
+export async function getPublishedJobsByCompanyIdService(
+  companyId: string,
+  page: number = 1,
+  pageSize: number = 5
+) {
+  const [jobs, total] = await Promise.all([
+    prisma.job.findMany({
+      where: {
+        companyId,
+        status: "PUBLISHED",
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      include: {
+        company: true,
+        applications: true,
+      },
+    }),
+    prisma.job.count({
+      where: {
+        companyId,
+        status: "PUBLISHED",
+      },
+    }),
+  ]);
+
+  const totalPages = Math.ceil(total / pageSize);
+
+  return {
+    jobs,
+    total,
+    totalPages,
+    page,
+    pageSize,
+  };
+}

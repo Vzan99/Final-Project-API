@@ -1,5 +1,7 @@
 import prisma from "../lib/prisma";
 import { UpdateApplicationStatusInput } from "../schema/application.schema";
+import { ApplyJobInput } from "../schema/application.schema";
+import { JobStatus, ApplicationStatus } from "@prisma/client";
 
 export async function getApplicantsByJob(jobId: string, adminId: string) {
   const company = await prisma.company.findUnique({
@@ -152,4 +154,39 @@ export async function updateApplicationStatus(
   });
 
   return updated;
+}
+
+export async function applyToJobService(
+  userId: string,
+  jobId: string,
+  input: ApplyJobInput
+) {
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+  });
+
+  if (!job || job.status !== JobStatus.PUBLISHED) {
+    throw new Error("Job is not available for applications");
+  }
+
+  const existingApplication = await prisma.application.findFirst({
+    where: { userId, jobId },
+  });
+
+  if (existingApplication) {
+    throw new Error("You have already applied to this job");
+  }
+
+  const application = await prisma.application.create({
+    data: {
+      userId,
+      jobId,
+      expectedSalary: input.expectedSalary,
+      cvFile: input.cvFile,
+      coverLetter: input.coverLetter,
+      status: ApplicationStatus.PENDING,
+    },
+  });
+
+  return application;
 }

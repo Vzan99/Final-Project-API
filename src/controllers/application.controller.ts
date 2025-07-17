@@ -3,6 +3,7 @@ import {
   getApplicantsByJob,
   getApplicationDetail,
   updateApplicationStatus,
+  applyToJobService,
 } from "../services/application.service";
 
 export async function getApplicantsByJobHandler(
@@ -62,6 +63,29 @@ export async function updateApplicationStatusHandler(
       message: "Application status updated",
       data: updated,
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function applyToJobController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const user = (req as any).user;
+
+    if (!user || user.role !== "USER" || !user.isVerified) {
+      throw new Error("Unauthorized access");
+    }
+
+    const jobId = req.params.jobId;
+    const input = (req as any).validatedBody;
+
+    const application = await applyToJobService(user.id, jobId, input);
+
+    res.status(201).json({ success: true, application });
   } catch (err) {
     next(err);
   }
