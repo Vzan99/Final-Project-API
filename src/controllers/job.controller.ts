@@ -8,7 +8,7 @@ import {
   deleteJobById,
   updateJobStatus,
   getJobsWithFilters,
-  getAllCategories,
+  getAllJobCategories,
   getSavedJobsByUser,
   isJobSavedByUser,
   saveJobService,
@@ -29,6 +29,7 @@ export async function createJobHandler(
 ) {
   try {
     const adminId = req.user!.id;
+
     const raw = {
       ...req.body,
       salary: req.body.salary ? Number(req.body.salary) : undefined,
@@ -243,7 +244,7 @@ export async function getAllCategoriesHandler(
   next: NextFunction
 ) {
   try {
-    const categories = await getAllCategories();
+    const categories = await getAllJobCategories();
 
     res.status(200).json({
       success: true,

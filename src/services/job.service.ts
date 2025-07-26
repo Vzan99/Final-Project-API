@@ -1,5 +1,5 @@
 import prisma from "../lib/prisma";
-import { JobStatus } from "@prisma/client";
+import { JobStatus, JobCategory } from "@prisma/client";
 import {
   CreateJobInput,
   UpdateJobInput,
@@ -20,27 +20,13 @@ export async function createJob(adminId: string, data: CreateJobInput) {
 
   if (!company) throw new Error("Company not found");
 
-  // Pisahkan "category" dari data lainnya
-  const { category, deadline, ...rest } = data;
+  const { deadline, ...rest } = data;
 
-  // Cek atau buat kategori berdasarkan nama
-  let categoryRecord = await prisma.category.findUnique({
-    where: { name: category },
-  });
-
-  if (!categoryRecord) {
-    categoryRecord = await prisma.category.create({
-      data: { name: category },
-    });
-  }
-
-  // Buat job baru
   const job = await prisma.job.create({
     data: {
       ...rest,
-      companyId: company.id,
-      categoryId: categoryRecord.id,
       deadline: new Date(deadline),
+      companyId: company.id,
     },
   });
 
@@ -51,7 +37,7 @@ export async function getJobsByAdmin(
   adminId: string,
   query: {
     title?: string;
-    categoryId?: string;
+    jobCategory?: JobCategory | string;
     status?: string;
     sort?: "asc" | "desc";
     page?: number;
@@ -66,7 +52,7 @@ export async function getJobsByAdmin(
 
   const {
     title,
-    categoryId,
+    jobCategory,
     status,
     sort = "desc",
     page = 1,
@@ -79,7 +65,10 @@ export async function getJobsByAdmin(
     where: {
       companyId: company.id,
       ...(title && { title: { contains: title, mode: "insensitive" } }),
-      ...(categoryId && { categoryId }),
+      ...(jobCategory &&
+        Object.values(JobCategory).includes(jobCategory as JobCategory) && {
+          jobCategory: jobCategory as JobCategory,
+        }),
       ...(status &&
         Object.values(JobStatus).includes(status as JobStatus) && {
           status: status as JobStatus,
@@ -96,11 +85,11 @@ export async function getJobsByAdmin(
       salary: true,
       deadline: true,
       experienceLevel: true,
-      jobType: true,
-      bannerUrl: true, // ✅ pastikan ini disertakan
-      category: {
-        select: { name: true },
-      },
+      employmentType: true,
+      jobCategory: true,
+      bannerUrl: true,
+      hasTest: true,
+      createdAt: true,
       _count: {
         select: { applications: true },
       },
@@ -111,7 +100,10 @@ export async function getJobsByAdmin(
     where: {
       companyId: company.id,
       ...(title && { title: { contains: title, mode: "insensitive" } }),
-      ...(categoryId && { categoryId }),
+      ...(jobCategory &&
+        Object.values(JobCategory).includes(jobCategory as JobCategory) && {
+          jobCategory: jobCategory as JobCategory,
+        }),
       ...(status &&
         Object.values(JobStatus).includes(status as JobStatus) && {
           status: status as JobStatus,
@@ -132,12 +124,13 @@ export async function getJobDetailById(jobId: string, adminId: string) {
     where: { adminId },
   });
 
-  if (!company) throw new Error("Company not found");
+  if (!company) {
+    throw new Error("Company not found");
+  }
 
   const job = await prisma.job.findUnique({
     where: { id: jobId },
     include: {
-      category: true,
       preSelectionTest: true,
       _count: {
         select: { applications: true },
@@ -171,31 +164,14 @@ export async function updateJobById(
     throw new Error("Job not found or access denied");
   }
 
-  const { category, deadline, bannerUrl, ...rest } = data;
-
-  let categoryId: string | undefined = undefined;
-
-  if (category) {
-    const existing = await prisma.category.findUnique({
-      where: { name: category },
-    });
-
-    const categoryRecord =
-      existing ??
-      (await prisma.category.create({
-        data: { name: category },
-      }));
-
-    categoryId = categoryRecord.id;
-  }
+  const { deadline, bannerUrl, ...rest } = data;
 
   const updated = await prisma.job.update({
     where: { id: jobId },
     data: {
       ...rest,
-      ...(categoryId && { categoryId }),
       ...(deadline && { deadline: new Date(deadline) }),
-      ...(bannerUrl && { bannerUrl }), // ✅ update banner kalau ada
+      ...(bannerUrl && { bannerUrl }),
     },
   });
 
@@ -259,7 +235,8 @@ export async function getJobsWithFilters(
   const {
     title,
     location,
-    jobType,
+    employmentType,
+    jobCategory,
     isRemote,
     salaryMin,
     salaryMax,
@@ -274,7 +251,6 @@ export async function getJobsWithFilters(
   } = filters;
 
   const skip = (page - 1) * pageSize;
-
   const andFilters: any[] = [];
 
   if (title) {
@@ -289,7 +265,8 @@ export async function getJobsWithFilters(
     });
   }
 
-  if (jobType) andFilters.push({ jobType });
+  if (employmentType) andFilters.push({ employmentType });
+  if (jobCategory) andFilters.push({ jobCategory });
   if (typeof isRemote === "boolean") andFilters.push({ isRemote });
   if (salaryMin !== undefined) andFilters.push({ salary: { gte: salaryMin } });
   if (salaryMax !== undefined) andFilters.push({ salary: { lte: salaryMax } });
@@ -363,7 +340,6 @@ export async function getJobsWithFilters(
             },
           },
         },
-        category: true,
       },
     }),
   ]);
@@ -371,13 +347,20 @@ export async function getJobsWithFilters(
   return { total, jobs };
 }
 
-export async function getAllCategories() {
-  return await prisma.category.findMany({
-    orderBy: { name: "asc" },
-    select: { id: true, name: true },
-  });
+export function getAllJobCategories() {
+  return [
+    { value: "FRONTEND_DEVELOPER", label: "Frontend Developer" },
+    { value: "BACKEND_DEVELOPER", label: "Backend Developer" },
+    { value: "FULL_STACK_DEVELOPER", label: "Full Stack Developer" },
+    { value: "MOBILE_APP_DEVELOPER", label: "Mobile App Developer" },
+    { value: "DEVOPS_ENGINEER", label: "DevOps Engineer" },
+    { value: "GAME_DEVELOPER", label: "Game Developer" },
+    { value: "SOFTWARE_ENGINEER", label: "Software Engineer" },
+    { value: "DATA_ENGINEER", label: "Data Engineer" },
+    { value: "SECURITY_ENGINEER", label: "Security Engineer" },
+    { value: "OTHER", label: "Other" },
+  ];
 }
-
 export async function getSavedJobsByUser(
   userId: string
 ): Promise<JobWithRelations[]> {
@@ -476,12 +459,21 @@ export async function removeSavedJob(userId: string, jobId: string) {
 }
 
 export async function getJobFiltersMetaService() {
-  const categories = await prisma.category.findMany({
-    orderBy: { name: "asc" },
-    select: { id: true, name: true },
-  });
+  const employmentTypes = Object.values(EmploymentType).map((type) => ({
+    label: type
+      .replace(/_/g, " ") // Ganti underscore dengan spasi
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase()), // Capitalize setiap kata
+    value: type,
+  }));
 
-  const employmentTypes = Object.values(EmploymentType);
+  const jobCategories = Object.values(JobCategory).map((category) => ({
+    label: category
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase()),
+    value: category,
+  }));
 
   const isRemoteOptions = [
     { label: "Remote", value: true },
@@ -489,17 +481,19 @@ export async function getJobFiltersMetaService() {
   ];
 
   const jobTypesRaw = await prisma.job.findMany({
-    distinct: ["jobType"],
-    select: { jobType: true },
+    distinct: ["experienceLevel"],
+    select: { experienceLevel: true },
   });
 
-  const jobTypes = jobTypesRaw.map((j) => j.jobType);
+  const experienceLevels = jobTypesRaw
+    .map((j) => j.experienceLevel)
+    .filter((v, i, a) => v && a.indexOf(v) === i);
 
   return {
     employmentTypes,
+    jobCategories,
     isRemoteOptions,
-    jobTypes,
-    categories,
+    experienceLevels,
   };
 }
 
@@ -576,10 +570,18 @@ export async function getJobDetailsService(jobId: string) {
     include: {
       company: {
         include: {
-          admin: true,
+          admin: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
         },
       },
-      category: true,
+      preSelectionTest: true,
+      applications: true,
+      interviews: true,
     },
   });
 }
