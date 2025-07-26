@@ -1,7 +1,14 @@
 import prisma from "../lib/prisma";
 import { UpdateApplicationStatusInput } from "../schema/application.schema";
 
-export async function getApplicantsByJob(jobId: string, adminId: string) {
+export async function getApplicantsByJob(
+  jobId: string,
+  adminId: string,
+  page = 1,
+  limit = 10
+) {
+  const skip = (page - 1) * limit;
+
   const company = await prisma.company.findUnique({
     where: { adminId },
   });
@@ -9,57 +16,99 @@ export async function getApplicantsByJob(jobId: string, adminId: string) {
 
   const job = await prisma.job.findUnique({
     where: { id: jobId },
+    select: { companyId: true, hasTest: true },
   });
   if (!job || job.companyId !== company.id)
     throw new Error("Unauthorized access to this job");
 
-  const applications = await prisma.application.findMany({
-    where: { jobId },
-    include: {
-      user: {
-        include: {
-          profile: true,
-          preSelectionAnswers: {
-            where: {
-              test: { jobId },
+  const [total, applications] = await Promise.all([
+    prisma.application.count({ where: { jobId } }),
+    prisma.application.findMany({
+      where: { jobId },
+      skip,
+      take: limit,
+      include: {
+        job: { select: { id: true, title: true } },
+        user: {
+          include: {
+            profile: true,
+            preSelectionAnswers: {
+              where: { test: { jobId } },
+              include: { test: true },
             },
-          },
-          subscriptions: {
-            where: {
-              isApproved: true,
-              paymentStatus: "PAID",
-              endDate: { gte: new Date() },
+            subscriptions: {
+              where: {
+                isApproved: true,
+                paymentStatus: "PAID",
+                endDate: { gte: new Date() },
+              },
+              orderBy: { endDate: "desc" },
+              take: 1,
             },
-            orderBy: { endDate: "desc" },
-            take: 1,
+            interviewSchedules: {
+              where: { jobId },
+              orderBy: { dateTime: "desc" },
+              take: 1,
+            },
           },
         },
       },
-    },
-  });
+    }),
+  ]);
 
-  return applications.map((app) => {
-    const test = app.user.preSelectionAnswers[0];
-    const subscription = app.user.subscriptions?.[0];
+  return {
+    hasTest: job.hasTest,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+    applicants: applications.map((app) => {
+      const user = app.user;
+      const test = user.preSelectionAnswers.find(
+        (a) => a.test.jobId === app.jobId
+      );
+      const subscription = user.subscriptions?.[0];
+      const latestInterview = user.interviewSchedules?.[0];
 
-    return {
-      id: app.id,
-      userId: app.user.id,
-      name: app.user.name,
-      email: app.user.email,
-      photoUrl: app.user.profile?.photoUrl ?? null,
-      education: app.user.profile?.education ?? null,
-      cvFile: app.cvFile,
-      coverLetter: app.coverLetter,
-      expectedSalary: app.expectedSalary,
-      status: app.status,
-      createdAt: app.createdAt,
-      testScore: test?.score ?? null,
-      passed: test?.passed ?? null,
-      submittedAt: test?.createdAt ?? null,
-      subscriptionType: subscription?.type ?? null,
-    };
-  });
+      return {
+        // A. Data Aplikasi
+        id: app.id,
+        status: app.status,
+        expectedSalary: app.expectedSalary,
+        cvFile: app.cvFile,
+        coverLetter: app.coverLetter,
+        appliedAt: app.createdAt,
+
+        // B. Data User
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          profile: user.profile,
+        },
+
+        // C. Data Pekerjaan
+        job: {
+          id: app.job.id,
+          title: app.job.title,
+        },
+
+        // D. Data Pre-selection Test
+        test: test
+          ? {
+              score: test.score,
+              passed: test.passed,
+              submittedAt: test.createdAt,
+            }
+          : null,
+
+        // E. Subscription
+        subscriptionType: subscription?.type ?? null,
+
+        // F. Interview (terbaru)
+        interviewStatus: latestInterview?.status ?? null,
+      };
+    }),
+  };
 }
 
 export async function getApplicationDetail(

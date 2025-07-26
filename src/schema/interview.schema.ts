@@ -27,3 +27,7 @@ export const updateInterviewSchema = z.object({
 });
 
 export type UpdateInterviewInput = z.infer<typeof updateInterviewSchema>;
+
+export const updateInterviewStatusSchema = z.object({
+  status: z.enum(["COMPLETED", "CANCELLED", "RESCHEDULED"]),
+});

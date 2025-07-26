@@ -2,6 +2,7 @@ import prisma from "../lib/prisma";
 import {
   CreatePreSelectionTestInput,
   SubmitPreSelectionAnswerInput,
+  UpdatePreSelectionTestInput,
 } from "../schema/preTest.schema";
 
 export async function createPreSelectionTest(
@@ -31,6 +32,72 @@ export async function createPreSelectionTest(
   return newTest;
 }
 
+export async function updatePreSelectionTest(
+  jobId: string,
+  data: UpdatePreSelectionTestInput
+) {
+  const existingTest = await prisma.preSelectionTest.findUnique({
+    where: { jobId },
+  });
+
+  if (!existingTest) {
+    throw new Error("Pre-selection test not found");
+  }
+
+  const currentQuestions = existingTest.questions as Array<any>;
+
+  for (const update of data.questions) {
+    const { index, question, options, correctIndex } = update;
+
+    if (index < 0 || index >= currentQuestions.length) {
+      throw new Error(`Invalid index: ${index}`);
+    }
+
+    currentQuestions[index] = {
+      question,
+      options,
+      correctIndex,
+    };
+  }
+
+  const updatedTest = await prisma.preSelectionTest.update({
+    where: { jobId },
+    data: {
+      questions: currentQuestions,
+    },
+  });
+
+  return updatedTest;
+}
+
+export async function getPreSelectionTestDetailByAdmin(
+  jobId: string,
+  adminId: string
+) {
+  const company = await prisma.company.findUnique({
+    where: { adminId },
+  });
+  if (!company) throw new Error("Company not found");
+
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    include: {
+      preSelectionTest: true,
+    },
+  });
+
+  if (!job || job.companyId !== company.id || !job.preSelectionTest)
+    throw new Error("Test not found or access denied");
+
+  const test = job.preSelectionTest;
+  const questions = test.questions as any[];
+
+  return {
+    jobId: job.id,
+    testId: test.id,
+    questions,
+  };
+}
 export async function getPreSelectionTestByJob(jobId: string) {
   const job = await prisma.job.findUnique({
     where: { id: jobId },

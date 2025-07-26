@@ -1,8 +1,10 @@
 import prisma from "../lib/prisma";
+import { Prisma } from "@prisma/client";
 import {
   CreateInterviewInput,
   UpdateInterviewInput,
 } from "../schema/interview.schema";
+import { InterviewStatus } from "@prisma/client";
 import { sendEmail } from "../utils/nodemailer";
 
 export async function createInterview(
@@ -37,7 +39,7 @@ export async function createInterview(
       job: true,
     },
   });
-  // send email here
+
   const subject = `Interview Scheduled for ${job.title}`;
   const html = `
     <div style="font-family: sans-serif; padding: 16px;">
@@ -76,7 +78,7 @@ export async function createInterview(
   return interview;
 }
 
-export async function getAllInterviewsByAdmin(adminId: string) {
+export async function getAllInterviewsByAdmin(adminId: string, query: any) {
   const company = await prisma.company.findUnique({
     where: { adminId },
     include: { jobs: true },
@@ -86,29 +88,36 @@ export async function getAllInterviewsByAdmin(adminId: string) {
 
   const jobIds = company.jobs.map((job) => job.id);
 
-  const interviews = await prisma.interviewSchedule.findMany({
-    where: { jobId: { in: jobIds } },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-      job: {
-        select: {
-          id: true,
-          title: true,
-        },
-      },
-    },
-    orderBy: {
-      dateTime: "asc",
-    },
-  });
+  const status = query.status;
+  const sort = query.sort === "dateTime_desc" ? "desc" : "asc";
+  const page = parseInt(query.page) || 1;
+  const limit = parseInt(query.limit) || 10;
 
-  return interviews;
+  const where: Prisma.InterviewScheduleWhereInput = {
+    jobId: { in: jobIds },
+    ...(status ? { status: status as any } : {}),
+  };
+
+  const [data, total] = await prisma.$transaction([
+    prisma.interviewSchedule.findMany({
+      where,
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        job: { select: { id: true, title: true } },
+      },
+      orderBy: { dateTime: sort },
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.interviewSchedule.count({ where }),
+  ]);
+
+  return {
+    data,
+    total,
+    page,
+    limit,
+  };
 }
 export async function getInterviewsByJob(jobId: string, adminId: string) {
   const company = await prisma.company.findUnique({
@@ -196,4 +205,40 @@ export async function deleteInterviewById(id: string, adminId: string) {
   });
 
   return { id };
+}
+
+export async function updateInterviewStatus(
+  interviewId: string,
+  adminId: string,
+  status: InterviewStatus
+) {
+  const interview = await prisma.interviewSchedule.findUnique({
+    where: { id: interviewId },
+    include: {
+      job: {
+        include: {
+          company: {
+            select: {
+              adminId: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!interview) {
+    throw new Error("Interview not found");
+  }
+
+  if (interview.job.company.adminId !== adminId) {
+    throw new Error("Not authorized to update this interview");
+  }
+
+  const updated = await prisma.interviewSchedule.update({
+    where: { id: interviewId },
+    data: { status },
+  });
+
+  return updated;
 }

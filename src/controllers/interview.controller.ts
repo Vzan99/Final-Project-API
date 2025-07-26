@@ -5,7 +5,9 @@ import {
   getInterviewsByJob,
   updateInterviewById,
   deleteInterviewById,
+  updateInterviewStatus,
 } from "../services/interview.service";
+import { InterviewStatus } from "@prisma/client";
 
 export async function createInterviewHandler(
   req: Request,
@@ -35,9 +37,10 @@ export async function getAllInterviewsByAdminHandler(
   try {
     const adminId = req.user!.id;
 
-    const interviews = await getAllInterviewsByAdmin(adminId);
+    // Kirimkan query ke service
+    const interviews = await getAllInterviewsByAdmin(adminId, req.query);
 
-    res.json({ success: true, data: interviews });
+    res.json({ success: true, ...interviews });
   } catch (err) {
     next(err);
   }
@@ -101,6 +104,37 @@ export async function deleteInterviewHandler(
     res.status(200).json({
       success: true,
       message: "Interview deleted successfully",
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateInterviewStatusHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const adminId = req.user!.id;
+    const interviewId = req.params.id;
+    const { status } = req.body;
+
+    if (!["COMPLETED", "CANCELLED", "RESCHEDULED"].includes(status)) {
+      res.status(400).json({ message: "Invalid status value" });
+      return;
+    }
+
+    const result = await updateInterviewStatus(
+      interviewId,
+      adminId,
+      status as InterviewStatus
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Interview status updated successfully",
       data: result,
     });
   } catch (err) {

@@ -138,6 +138,7 @@ export async function getJobDetailById(jobId: string, adminId: string) {
     where: { id: jobId },
     include: {
       category: true,
+      preSelectionTest: true,
       _count: {
         select: { applications: true },
       },

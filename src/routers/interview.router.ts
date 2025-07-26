@@ -7,6 +7,7 @@ import {
   getInterviewsByJobHandler,
   updateInterviewHandler,
   deleteInterviewHandler,
+  updateInterviewStatusHandler,
 } from "../controllers/interview.controller";
 import {
   createInterviewSchema,
@@ -32,4 +33,11 @@ router.patch(
   updateInterviewHandler
 );
 router.delete("/:id", VerifyToken, AdminGuard, deleteInterviewHandler);
+router.patch(
+  "/:id/status",
+  VerifyToken,
+  AdminGuard,
+  updateInterviewStatusHandler
+);
+
 export default router;
