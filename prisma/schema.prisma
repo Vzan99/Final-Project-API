@@ -89,13 +89,6 @@ model Company {
   reviews      CompanyReview[]
 }
 
-model Category {
-  id    String @id @default(uuid())
-  name  String @unique
-
-  jobs  Job[]
-}
-
 model Job {
   id               String              @id @default(uuid())
   title            String
@@ -106,16 +99,17 @@ model Job {
   deadline         DateTime
   isRemote         Boolean             @default(false)
   experienceLevel  String
-  jobType          String
+  jobType          String?
+  employmentType EmploymentType @default(OTHER)
+  jobCategory JobCategory @default(OTHER)
   tags             String[]
   bannerUrl        String?
   hasTest          Boolean             @default(false)
   createdAt        DateTime            @default(now())
-
+  latitude Float?
+  longitude Float?
   company          Company             @relation(fields: [companyId], references: [id])
   companyId        String
-  category         Category            @relation(fields: [categoryId], references: [id])
-  categoryId       String
   applications     Application[]
   interviews       InterviewSchedule[]
   savedBy          SavedJob[]
@@ -134,7 +128,7 @@ model Application {
 
   user           User                @relation(fields: [userId], references: [id])
   userId         String
-  job            Job                 @relation(fields: [jobId], references: [id])
+  job            Job                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
   jobId          String
 }
 
@@ -146,7 +140,7 @@ model InterviewSchedule {
   status       InterviewStatus  @default(SCHEDULED)
   reminderSent Boolean          @default(false)
 
-  job          Job              @relation(fields: [jobId], references: [id])
+  job          Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
   jobId        String
   user         User             @relation(fields: [userId], references: [id])
   userId       String
@@ -237,7 +231,7 @@ model SavedJob {
 
   user      User     @relation(fields: [userId], references: [id])
   userId    String
-  job       Job      @relation(fields: [jobId], references: [id])
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
   jobId     String
 
   @@unique([userId, jobId])
@@ -248,7 +242,7 @@ model PreSelectionTest {
   questions Json
   createdAt DateTime @default(now())
 
-  job       Job      @relation(fields: [jobId], references: [id])
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
   jobId     String   @unique
   answers   PreSelectionAnswer[]
 }
@@ -262,7 +256,7 @@ model PreSelectionAnswer {
 
   user      User             @relation(fields: [userId], references: [id])
   userId    String
-  test      PreSelectionTest @relation(fields: [testId], references: [id])
+  test      PreSelectionTest @relation(fields: [testId], references: [id], onDelete: Cascade)
   testId    String
 
   @@unique([userId, testId])
@@ -342,4 +336,17 @@ enum LocationType {
   REMOTE
   ON_SITE
   HYBRID
+}
+
+enum JobCategory {
+  FRONTEND_DEVELOPER
+  BACKEND_DEVELOPER
+  FULL_STACK_DEVELOPER
+  MOBILE_APP_DEVELOPER
+  DEVOPS_ENGINEER
+  GAME_DEVELOPER
+  SOFTWARE_ENGINEER
+  DATA_ENGINEER
+  SECURITY_ENGINEER
+  OTHER
 }

@@ -9,11 +9,30 @@ export const createJobSchema = z.object({
     message: "Invalid date format",
   }),
   isRemote: z.boolean().default(false),
-  experienceLevel: z.enum(["Entry", "Mid", "Senior"]),
-  jobType: z.enum(["Full-time", "Part-time", "Contract"]),
+  experienceLevel: z.string(), // Tetap string
+  employmentType: z.enum([
+    "FULL_TIME",
+    "PART_TIME",
+    "CONTRACT",
+    "INTERNSHIP",
+    "TEMPORARY",
+    "VOLUNTEER",
+    "OTHER",
+  ]),
+  jobCategory: z.enum([
+    "FRONTEND_DEVELOPER",
+    "BACKEND_DEVELOPER",
+    "FULL_STACK_DEVELOPER",
+    "MOBILE_APP_DEVELOPER",
+    "DEVOPS_ENGINEER",
+    "GAME_DEVELOPER",
+    "SOFTWARE_ENGINEER",
+    "DATA_ENGINEER",
+    "SECURITY_ENGINEER",
+    "OTHER",
+  ]),
   tags: z.array(z.string()).optional(),
   bannerUrl: z.string().optional(),
-  category: z.string(),
   hasTest: z.boolean().optional().default(false),
 });
 

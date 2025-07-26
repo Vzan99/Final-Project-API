@@ -1,16 +1,17 @@
-import { Job, Company, Category, User } from "@prisma/client";
+import { Job, Company, User } from "@prisma/client";
 
 export interface JobWithRelations extends Job {
   company: Company & {
     admin: Pick<User, "id" | "name">;
   };
-  category?: Category | null;
+  // category: Category | null; // ❌ HAPUS karena tidak ada relasi Category
 }
 
 export interface JobFilters {
   title?: string;
   location?: string;
-  jobType?: string;
+  employmentType?: string; // ✅ ganti dari jobType
+  jobCategory?: string; // ✅ tambahan baru untuk filter kategori pekerjaan
   isRemote?: boolean;
   salaryMin?: number;
   salaryMax?: number;

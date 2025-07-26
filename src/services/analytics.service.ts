@@ -100,11 +100,7 @@ export async function getApplicantInterests() {
     select: {
       job: {
         select: {
-          category: {
-            select: {
-              name: true,
-            },
-          },
+          jobCategory: true,
         },
       },
     },
@@ -113,9 +109,13 @@ export async function getApplicantInterests() {
   const interestMap: { [category: string]: number } = {};
 
   for (const app of applications) {
-    const category = app.job.category?.name ?? "Unknown";
+    const category = app.job?.jobCategory ?? "OTHER";
+    const readableCategory = (category as string)
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
 
-    interestMap[category] = (interestMap[category] || 0) + 1;
+    interestMap[readableCategory] = (interestMap[readableCategory] || 0) + 1;
   }
 
   const result = Object.entries(interestMap).map(([category, count]) => ({
