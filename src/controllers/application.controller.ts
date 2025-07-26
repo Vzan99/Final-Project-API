@@ -3,8 +3,10 @@ import {
   getApplicantsByJob,
   getApplicationDetail,
   updateApplicationStatus,
-  applyToJobService,
+  checkIfUserApplied,
+  getUserApplicationService,
 } from "../services/application.service";
+import { ApplicationQuery } from "../schema/application.schema";
 
 export async function getApplicantsByJobHandler(
   req: Request,
@@ -68,24 +70,43 @@ export async function updateApplicationStatusHandler(
   }
 }
 
-export async function applyToJobController(
+export async function checkApplicationStatusHandler(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
-    const user = (req as any).user;
-
-    if (!user || user.role !== "USER" || !user.isVerified) {
-      throw new Error("Unauthorized access");
-    }
-
+    const userId = req.user!.id;
     const jobId = req.params.jobId;
-    const input = (req as any).validatedBody;
 
-    const application = await applyToJobService(user.id, jobId, input);
+    const hasApplied = await checkIfUserApplied(jobId, userId);
 
-    res.status(201).json({ success: true, application });
+    res.status(200).json({ success: true, applied: hasApplied });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getUserApplicationsController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) throw new Error("User not authenticated");
+
+    const { page, pageSize, status } = (req as any)
+      .validatedQuery as ApplicationQuery;
+
+    const result = await getUserApplicationService(
+      userId,
+      page,
+      pageSize,
+      status
+    );
+
+    res.status(200).json(result);
   } catch (err) {
     next(err);
   }

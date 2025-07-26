@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { EmploymentType, LocationType } from "@prisma/client";
 
 export const updateProfileSchema = z.object({
   name: z.string().optional(),

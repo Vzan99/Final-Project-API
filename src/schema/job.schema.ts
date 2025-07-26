@@ -106,7 +106,6 @@ export const jobFiltersSchema = z.object({
       message: "lat must be a number",
     })
     .transform((val) => (val ? Number(val) : undefined)),
-
   lng: z
     .string()
     .optional()
@@ -114,6 +113,25 @@ export const jobFiltersSchema = z.object({
       message: "lng must be a number",
     })
     .transform((val) => (val ? Number(val) : undefined)),
+
+  listingTime: z
+    .enum(["any", "today", "3days", "7days", "14days", "30days", "custom"])
+    .optional()
+    .default("any"),
+
+  customStartDate: z
+    .string()
+    .optional()
+    .refine((val) => !val || !isNaN(Date.parse(val)), {
+      message: "customStartDate must be a valid date string",
+    }),
+
+  customEndDate: z
+    .string()
+    .optional()
+    .refine((val) => !val || !isNaN(Date.parse(val)), {
+      message: "customEndDate must be a valid date string",
+    }),
 });
 
 export const applyJobSchema = z.object({
@@ -126,3 +144,26 @@ export const applyJobSchema = z.object({
 export type ApplyJobInput = z.infer<typeof applyJobSchema> & {
   cvFile: string;
 };
+
+export const PaginationSchema = z.object({
+  page: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || (Number(val) > 0 && Number.isInteger(Number(val))),
+      {
+        message: "page must be a positive integer",
+      }
+    )
+    .transform((val) => (val ? Number(val) : 1)),
+  pageSize: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || (Number(val) > 0 && Number.isInteger(Number(val))),
+      {
+        message: "pageSize must be a positive integer",
+      }
+    )
+    .transform((val) => (val ? Number(val) : 10)),
+});

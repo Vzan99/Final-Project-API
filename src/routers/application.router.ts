@@ -1,18 +1,30 @@
 import { Router } from "express";
 import ReqValidator from "../middlewares/reqValidator.middleware";
+import QueryValidator from "../middlewares/queryValidator.middleware";
 import { VerifyToken, AdminGuard } from "../middlewares/auth.middleware";
+import { ApplicationQuerySchema } from "../schema/application.schema";
 import {
   getApplicantsByJobHandler,
   getApplicationDetailHandler,
   updateApplicationStatusHandler,
-  applyToJobController,
+  checkApplicationStatusHandler,
+  getUserApplicationsController,
 } from "../controllers/application.controller";
 import {
   updateApplicationStatusSchema,
   ApplyJobSchema,
 } from "../schema/application.schema";
+import { UserGuard } from "../middlewares/auth.middleware";
 
 const router = Router();
+
+router.get(
+  "/user",
+  VerifyToken,
+  UserGuard,
+  QueryValidator(ApplicationQuerySchema),
+  getUserApplicationsController
+);
 
 router.get(
   "/jobs/:jobId/applicants",
@@ -29,11 +41,11 @@ router.patch(
   updateApplicationStatusHandler
 );
 
-router.post(
-  "/apply/:jobId",
+router.get(
+  "/:jobId/status",
   VerifyToken,
-  ReqValidator(ApplyJobSchema),
-  applyToJobController
+  UserGuard,
+  checkApplicationStatusHandler
 );
 
 export default router;

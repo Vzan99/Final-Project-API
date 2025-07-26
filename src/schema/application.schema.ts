@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ApplicationStatus } from "@prisma/client";
 
 export const updateApplicationStatusSchema = z.object({
   status: z.enum(["REVIEWED", "INTERVIEW", "ACCEPTED", "REJECTED"]),
@@ -15,3 +16,11 @@ export const ApplyJobSchema = z.object({
 });
 
 export type ApplyJobInput = z.infer<typeof ApplyJobSchema>;
+
+export const ApplicationQuerySchema = z.object({
+  page: z.coerce.number().min(1).default(1),
+  pageSize: z.coerce.number().min(1).max(100).default(10),
+  status: z.nativeEnum(ApplicationStatus).optional(),
+});
+
+export type ApplicationQuery = z.infer<typeof ApplicationQuerySchema>;

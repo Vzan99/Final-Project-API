@@ -11,16 +11,25 @@ export interface JobFilters {
   title?: string;
   location?: string;
   jobType?: string;
-  isRemote?: boolean | null;
+  isRemote?: boolean;
   salaryMin?: number;
   salaryMax?: number;
   experienceLevel?: string;
   page?: number;
   pageSize?: number;
-  sortBy?: "createdAt" | "salary" | "relevance";
+  sortBy?: "createdAt" | "salary";
   sortOrder?: "asc" | "desc";
-  lat?: number;
-  lng?: number;
+
+  listingTime?:
+    | "any"
+    | "today"
+    | "3days"
+    | "7days"
+    | "14days"
+    | "30days"
+    | "custom";
+  customStartDate?: string;
+  customEndDate?: string;
 }
 
 export interface PaginatedJobs {
