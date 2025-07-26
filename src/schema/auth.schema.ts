@@ -43,3 +43,21 @@ export const LoginSchema = z.object({
 export const VerifyEmailSchema = z.object({
   token: z.string().min(1, "Token is required"),
 });
+
+export const RequestPasswordResetSchema = z.object({
+  email: z.string().email("Invalid email format").trim(),
+});
+
+export const ResetPasswordSchema = z.object({
+  token: z.string().min(1, "Token is required"),
+  newPassword: z
+    .string()
+    .min(6, "Password must be at least 6 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number")
+    .regex(
+      /[^A-Za-z0-9]/,
+      "Password must contain at least one special character"
+    )
+    .nonempty("New password is required"),
+});

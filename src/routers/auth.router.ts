@@ -16,6 +16,8 @@ import {
   RegisterAdminSchema,
   RegisterUserSchema,
   VerifyEmailSchema,
+  RequestPasswordResetSchema,
+  ResetPasswordSchema,
 } from "../schema/auth.schema";
 import ReqValidator from "../middlewares/reqValidator.middleware";
 import QueryValidator from "../middlewares/queryValidator.middleware";
@@ -49,9 +51,17 @@ router.post("/resend-verification", VerifyToken, ResendVerificationController);
 
 router.post("/sync-google", SyncGoogleUserController);
 
-router.post("/request-password-reset", RequestPasswordResetController);
+router.post(
+  "/request-password-reset",
+  ReqValidator(RequestPasswordResetSchema),
+  RequestPasswordResetController
+);
 
-router.post("/reset-password", ResetPasswordController);
+router.post(
+  "/reset-password",
+  ReqValidator(ResetPasswordSchema),
+  ResetPasswordController
+);
 
 router.get(
   "/verify-new-email",

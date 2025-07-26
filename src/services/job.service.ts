@@ -250,6 +250,8 @@ export async function updateJobStatus(
   return updated;
 }
 
+import { startOfToday, subDays } from "date-fns";
+
 export async function getJobsWithFilters(
   filters: JobFilters
 ): Promise<PaginatedJobs> {
@@ -265,6 +267,9 @@ export async function getJobsWithFilters(
     pageSize = 10,
     sortBy = "createdAt",
     sortOrder = "desc",
+    listingTime = "any",
+    customStartDate,
+    customEndDate,
   } = filters;
 
   const skip = (page - 1) * pageSize;
@@ -291,6 +296,40 @@ export async function getJobsWithFilters(
     andFilters.push({
       experienceLevel: { contains: experienceLevel, mode: "insensitive" },
     });
+  }
+
+  if (listingTime !== "any") {
+    let gteDate: Date | undefined;
+    let lteDate: Date | undefined;
+
+    switch (listingTime) {
+      case "today":
+        gteDate = startOfToday();
+        break;
+      case "3days":
+        gteDate = subDays(new Date(), 3);
+        break;
+      case "7days":
+        gteDate = subDays(new Date(), 7);
+        break;
+      case "14days":
+        gteDate = subDays(new Date(), 14);
+        break;
+      case "30days":
+        gteDate = subDays(new Date(), 30);
+        break;
+      case "custom":
+        if (customStartDate) gteDate = new Date(customStartDate);
+        if (customEndDate) lteDate = new Date(customEndDate);
+        break;
+    }
+
+    if (gteDate || lteDate) {
+      const createdAtFilter: any = {};
+      if (gteDate) createdAtFilter.gte = gteDate;
+      if (lteDate) createdAtFilter.lte = lteDate;
+      andFilters.push({ createdAt: createdAtFilter });
+    }
   }
 
   const allowedSortBy = ["createdAt", "salary"];
@@ -442,7 +481,11 @@ export async function getJobFiltersMetaService() {
   });
 
   const employmentTypes = Object.values(EmploymentType);
-  const locationTypes = Object.values(LocationType);
+
+  const isRemoteOptions = [
+    { label: "Remote", value: true },
+    { label: "On-site", value: false },
+  ];
 
   const jobTypesRaw = await prisma.job.findMany({
     distinct: ["jobType"],
@@ -453,7 +496,7 @@ export async function getJobFiltersMetaService() {
 
   return {
     employmentTypes,
-    locationTypes,
+    isRemoteOptions,
     jobTypes,
     categories,
   };
@@ -524,4 +567,48 @@ export async function applyJob(
   });
 
   return newApp;
+}
+
+export async function getJobDetailsService(jobId: string) {
+  return prisma.job.findUnique({
+    where: { id: jobId },
+    include: {
+      company: {
+        include: {
+          admin: true,
+        },
+      },
+      category: true,
+    },
+  });
+}
+
+export async function getSavedJobsByUserPaginated(
+  userId: string,
+  page: number,
+  pageSize: number
+): Promise<{ total: number; jobs: JobWithRelations[] }> {
+  const skip = (page - 1) * pageSize;
+
+  const [total, saved] = await Promise.all([
+    prisma.savedJob.count({ where: { userId } }),
+    prisma.savedJob.findMany({
+      where: { userId },
+      skip,
+      take: pageSize,
+      include: {
+        job: {
+          include: {
+            company: {
+              include: {
+                admin: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  return { total, jobs: saved.map((s) => s.job) };
 }

@@ -156,37 +156,54 @@ export async function updateApplicationStatus(
   return updated;
 }
 
-export async function applyToJobService(
-  userId: string,
-  jobId: string,
-  input: ApplyJobInput
-) {
-  const job = await prisma.job.findUnique({
-    where: { id: jobId },
-  });
-
-  if (!job || job.status !== JobStatus.PUBLISHED) {
-    throw new Error("Job is not available for applications");
-  }
-
-  const existingApplication = await prisma.application.findFirst({
-    where: { userId, jobId },
-  });
-
-  if (existingApplication) {
-    throw new Error("You have already applied to this job");
-  }
-
-  const application = await prisma.application.create({
-    data: {
-      userId,
+export async function checkIfUserApplied(jobId: string, userId: string) {
+  const existing = await prisma.application.findFirst({
+    where: {
       jobId,
-      expectedSalary: input.expectedSalary,
-      cvFile: input.cvFile,
-      coverLetter: input.coverLetter,
-      status: ApplicationStatus.PENDING,
+      userId,
     },
   });
 
-  return application;
+  return !!existing;
+}
+
+export async function getUserApplicationService(
+  userId: string,
+  page: number = 1,
+  pageSize: number = 10,
+  status?: ApplicationStatus
+) {
+  const skip = (page - 1) * pageSize;
+
+  const where: any = { userId };
+  if (status) where.status = status;
+
+  const [total, applications] = await Promise.all([
+    prisma.application.count({ where }),
+    prisma.application.findMany({
+      where,
+      skip,
+      take: pageSize,
+      orderBy: { createdAt: "desc" },
+      include: {
+        job: {
+          include: {
+            company: {
+              include: {
+                admin: true,
+              },
+            },
+          },
+        },
+      },
+    }),
+  ]);
+
+  return {
+    total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(total / pageSize),
+    applications,
+  };
 }

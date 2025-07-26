@@ -16,6 +16,8 @@ import {
   getJobFiltersMetaService,
   GetSuggestedJobService,
   applyJob,
+  getJobDetailsService,
+  getSavedJobsByUserPaginated,
 } from "../services/job.service";
 import type { JobFilters } from "../interfaces/jobs.interface";
 import { createJobSchema, applyJobSchema } from "../schema/job.schema";
@@ -378,14 +380,14 @@ export async function applyJobHandler(
   next: NextFunction
 ): Promise<void> {
   try {
-    const jobId = req.params.jobId;
+    const jobId = req.params.id;
     const userId = req.user!.id;
 
     const { expectedSalary, coverLetter } = req.body;
 
     const parsed = applyJobSchema.safeParse({
       expectedSalary: Number(expectedSalary),
-      cvFile: "placeholder", // hanya supaya schema lolos
+      cvFile: "placeholder",
       coverLetter,
     });
 
@@ -400,7 +402,6 @@ export async function applyJobHandler(
       return;
     }
 
-    // Upload ke Cloudinary
     const result = await cloudinaryUpload(file, "raw");
     const cvFileUrl = result.secure_url;
 
@@ -413,5 +414,45 @@ export async function applyJobHandler(
     res.status(201).json({ success: true, data: application });
   } catch (err) {
     next(err);
+  }
+}
+
+export async function getJobDetailViewController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const jobId = req.params.id;
+
+    const job = await getJobDetailsService(jobId);
+
+    if (!job) {
+      throw new Error("Job not found");
+    }
+
+    res.status(200).json(job);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getSavedJobsPaginatedController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+
+    const { page, pageSize } = (req as any).validatedQuery;
+
+    const result = await getSavedJobsByUserPaginated(userId, page, pageSize);
+    res.status(200).json(result);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
   }
 }
