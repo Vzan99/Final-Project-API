@@ -7,10 +7,13 @@ import {
   submitPreSelectionAnswerHandler,
   getApplicantsWithTestResultHandler,
   getPreSelectionStatusHandler,
+  updatePreSelectionTestHandler,
+  getPreSelectionTestByAdminHandler,
 } from "../controllers/preTest.controller";
 import {
   createPreSelectionTestSchema,
   submitPreSelectionAnswerSchema,
+  updatePreSelectionTestSchema,
 } from "../schema/preTest.schema";
 
 const router = Router();
@@ -21,6 +24,21 @@ router.post(
   AdminGuard,
   ReqValidator(createPreSelectionTestSchema),
   createPreSelectionTestHandler
+);
+
+router.patch(
+  "/:jobId",
+  VerifyToken,
+  AdminGuard,
+  ReqValidator(updatePreSelectionTestSchema),
+  updatePreSelectionTestHandler
+);
+
+router.get(
+  "/admin/jobs/:jobId/pre-selection-test",
+  VerifyToken,
+  AdminGuard,
+  getPreSelectionTestByAdminHandler
 );
 
 router.get(
