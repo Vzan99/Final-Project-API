@@ -265,8 +265,12 @@ export async function getJobsWithFilters(
     });
   }
 
-  if (employmentType) andFilters.push({ employmentType });
-  if (jobCategory) andFilters.push({ jobCategory });
+  if (Array.isArray(employmentType) && employmentType.length > 0) {
+    andFilters.push({ employmentType: { in: employmentType } });
+  }
+  if (Array.isArray(jobCategory) && jobCategory.length > 0) {
+    andFilters.push({ jobCategory: { in: jobCategory } });
+  }
   if (typeof isRemote === "boolean") andFilters.push({ isRemote });
   if (salaryMin !== undefined) andFilters.push({ salary: { gte: salaryMin } });
   if (salaryMax !== undefined) andFilters.push({ salary: { lte: salaryMax } });
@@ -461,9 +465,9 @@ export async function removeSavedJob(userId: string, jobId: string) {
 export async function getJobFiltersMetaService() {
   const employmentTypes = Object.values(EmploymentType).map((type) => ({
     label: type
-      .replace(/_/g, " ") // Ganti underscore dengan spasi
+      .replace(/_/g, " ")
       .toLowerCase()
-      .replace(/\b\w/g, (c) => c.toUpperCase()), // Capitalize setiap kata
+      .replace(/\b\w/g, (c) => c.toUpperCase()),
     value: type,
   }));
 

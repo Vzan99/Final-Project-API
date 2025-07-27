@@ -72,7 +72,19 @@ export type PublishJobInput = z.infer<typeof publishJobSchema>;
 export const jobFiltersSchema = z.object({
   title: z.string().optional(),
   location: z.string().optional(),
-  jobType: z.string().optional(),
+  employmentType: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((val) =>
+      typeof val === "string" ? [val] : Array.isArray(val) ? val : []
+    ),
+
+  jobCategory: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((val) =>
+      typeof val === "string" ? [val] : Array.isArray(val) ? val : []
+    ),
   isRemote: z
     .string()
     .optional()
