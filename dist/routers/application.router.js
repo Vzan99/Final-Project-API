@@ -1,0 +1,20 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const reqValidator_middleware_1 = __importDefault(require("../middlewares/reqValidator.middleware"));
+const queryValidator_middleware_1 = __importDefault(require("../middlewares/queryValidator.middleware"));
+const auth_middleware_1 = require("../middlewares/auth.middleware");
+const application_schema_1 = require("../schema/application.schema");
+const application_controller_1 = require("../controllers/application.controller");
+const application_schema_2 = require("../schema/application.schema");
+const auth_middleware_2 = require("../middlewares/auth.middleware");
+const router = (0, express_1.Router)();
+router.get("/user", auth_middleware_1.VerifyToken, auth_middleware_2.UserGuard, (0, queryValidator_middleware_1.default)(application_schema_1.ApplicationQuerySchema), application_controller_1.getUserApplicationsController);
+router.get("/jobs/:jobId/applicants", auth_middleware_1.VerifyToken, auth_middleware_1.AdminGuard, application_controller_1.getApplicantsByJobHandler);
+router.get("/:id", auth_middleware_1.VerifyToken, auth_middleware_1.AdminGuard, application_controller_1.getApplicationDetailHandler);
+router.patch("/:id/status", auth_middleware_1.VerifyToken, auth_middleware_1.AdminGuard, (0, reqValidator_middleware_1.default)(application_schema_2.updateApplicationStatusSchema), application_controller_1.updateApplicationStatusHandler);
+router.get("/:jobId/status", auth_middleware_1.VerifyToken, auth_middleware_2.UserGuard, application_controller_1.checkApplicationStatusHandler);
+exports.default = router;

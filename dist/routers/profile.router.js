@@ -1,0 +1,22 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const profile_controller_1 = require("../controllers/profile.controller");
+const auth_middleware_1 = require("../middlewares/auth.middleware");
+const reqValidator_middleware_1 = __importDefault(require("../middlewares/reqValidator.middleware"));
+const profile_schema_1 = require("../schema/profile.schema");
+const multer_1 = require("../utils/multer");
+const router = (0, express_1.Router)();
+router.get("/", auth_middleware_1.VerifyToken, profile_controller_1.GetProfileController);
+router.put("/change-password", auth_middleware_1.VerifyToken, (0, reqValidator_middleware_1.default)(profile_schema_1.changePasswordSchema), profile_controller_1.ChangePasswordController);
+router.put("/change-email", auth_middleware_1.VerifyToken, (0, reqValidator_middleware_1.default)(profile_schema_1.changeEmailSchema), profile_controller_1.ChangeEmailController);
+router.put("/edit/user", auth_middleware_1.VerifyToken, auth_middleware_1.UserGuard, (0, reqValidator_middleware_1.default)(profile_schema_1.updateProfileSchema), profile_controller_1.UpdateProfileController);
+router.put("/edit/photo", auth_middleware_1.VerifyToken, (0, multer_1.Multer)().single("photo"), profile_controller_1.UpdateProfilePhotoController);
+router.put("/edit/resume", auth_middleware_1.VerifyToken, auth_middleware_1.UserGuard, (0, multer_1.Multer)().single("resume"), profile_controller_1.UpdateResumeController);
+router.put("/edit/banner", auth_middleware_1.VerifyToken, (0, multer_1.Multer)().single("banner"), profile_controller_1.UpdateBannerController);
+router.put("/edit/experiences", auth_middleware_1.VerifyToken, auth_middleware_1.UserGuard, (0, reqValidator_middleware_1.default)(profile_schema_1.updateExperiencesSchema), profile_controller_1.UpdateExperiencesController);
+router.put("/edit/company", auth_middleware_1.VerifyToken, auth_middleware_1.AdminGuard, (0, reqValidator_middleware_1.default)(profile_schema_1.updateCompanyProfileSchema), profile_controller_1.UpdateCompanyProfileController);
+exports.default = router;
