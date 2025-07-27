@@ -1,0 +1,23 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_controller_1 = require("../controllers/auth.controller");
+const auth_schema_1 = require("../schema/auth.schema");
+const reqValidator_middleware_1 = __importDefault(require("../middlewares/reqValidator.middleware"));
+const queryValidator_middleware_1 = __importDefault(require("../middlewares/queryValidator.middleware"));
+const auth_middleware_1 = require("../middlewares/auth.middleware");
+const router = (0, express_1.Router)();
+router.post("/register/user", (0, reqValidator_middleware_1.default)(auth_schema_1.RegisterUserSchema), auth_controller_1.RegisterUserController);
+router.post("/register/admin", (0, reqValidator_middleware_1.default)(auth_schema_1.RegisterAdminSchema), auth_controller_1.RegisterAdminController);
+router.post("/login", (0, reqValidator_middleware_1.default)(auth_schema_1.LoginSchema), auth_controller_1.LoginController);
+router.post("/logout", auth_controller_1.LogoutController);
+router.get("/verify-email", (0, queryValidator_middleware_1.default)(auth_schema_1.VerifyEmailSchema), auth_controller_1.VerifyEmailController);
+router.post("/resend-verification", auth_middleware_1.VerifyToken, auth_controller_1.ResendVerificationController);
+router.post("/sync-google", auth_controller_1.SyncGoogleUserController);
+router.post("/request-password-reset", (0, reqValidator_middleware_1.default)(auth_schema_1.RequestPasswordResetSchema), auth_controller_1.RequestPasswordResetController);
+router.post("/reset-password", (0, reqValidator_middleware_1.default)(auth_schema_1.ResetPasswordSchema), auth_controller_1.ResetPasswordController);
+router.get("/verify-new-email", (0, queryValidator_middleware_1.default)(auth_schema_1.VerifyEmailSchema), auth_controller_1.VerifyNewEmailController);
+exports.default = router;

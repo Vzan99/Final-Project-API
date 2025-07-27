@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_middleware_1 = require("../middlewares/auth.middleware");
+const analytics_controller_1 = require("../controllers/analytics.controller");
+const asyncHandler_1 = require("../utils/asyncHandler");
+const router = (0, express_1.Router)();
+router.get("/user-demographics", auth_middleware_1.VerifyToken, auth_middleware_1.AdminGuard, analytics_controller_1.getUserDemographicsHandler);
+router.get("/salary-trends", auth_middleware_1.VerifyToken, auth_middleware_1.AdminGuard, analytics_controller_1.getSalaryTrendsHandler);
+router.get("/applicant-interests", auth_middleware_1.VerifyToken, auth_middleware_1.AdminGuard, analytics_controller_1.getApplicantInterestsHandler);
+router.get("/overview", auth_middleware_1.VerifyToken, auth_middleware_1.AdminGuard, analytics_controller_1.getAnalyticsOverviewHandler);
+router.get("/developer-overview", auth_middleware_1.VerifyToken, auth_middleware_1.DeveloperGuard, (0, asyncHandler_1.asyncHandler)(analytics_controller_1.getDeveloperOverview));
+exports.default = router;
