@@ -16,7 +16,6 @@ exports.updateJobHandler = updateJobHandler;
 exports.deleteJobHandler = deleteJobHandler;
 exports.updateJobStatusHandler = updateJobStatusHandler;
 exports.getJobsHandler = getJobsHandler;
-exports.getAllCategoriesHandler = getAllCategoriesHandler;
 exports.getSavedJobsController = getSavedJobsController;
 exports.checkIsJobSavedHandler = checkIsJobSavedHandler;
 exports.saveJobHandler = saveJobHandler;
@@ -26,9 +25,11 @@ exports.GetSuggestedJobsController = GetSuggestedJobsController;
 exports.applyJobHandler = applyJobHandler;
 exports.getJobDetailViewController = getJobDetailViewController;
 exports.getSavedJobsPaginatedController = getSavedJobsPaginatedController;
+exports.getNearbyJobsController = getNearbyJobsController;
 const cloudinary_1 = require("../utils/cloudinary");
 const job_service_1 = require("../services/job.service");
 const job_schema_1 = require("../schema/job.schema");
+const client_1 = require("@prisma/client");
 function createJobHandler(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -172,21 +173,6 @@ function getJobsHandler(req, res, next) {
         }
     });
 }
-function getAllCategoriesHandler(req, res, next) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const categories = yield (0, job_service_1.getAllJobCategories)();
-            res.status(200).json({
-                success: true,
-                message: "Categories fetched successfully",
-                data: categories,
-            });
-        }
-        catch (err) {
-            next(err);
-        }
-    });
-}
 function getSavedJobsController(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
@@ -307,7 +293,7 @@ function applyJobHandler(req, res, next) {
             }
             const result = yield (0, cloudinary_1.cloudinaryUpload)(file, "raw");
             const cvFileUrl = result.secure_url;
-            const application = yield (0, job_service_1.applyJob)(jobId, userId, {
+            const application = yield (0, job_service_1.applyJobService)(jobId, userId, {
                 expectedSalary: parsed.data.expectedSalary,
                 coverLetter,
                 cvFile: cvFileUrl,
@@ -325,9 +311,15 @@ function getJobDetailViewController(req, res, next) {
             const jobId = req.params.id;
             const job = yield (0, job_service_1.getJobDetailsService)(jobId);
             if (!job) {
-                throw new Error("Job not found");
+                res.status(404).json({ message: "Job not found" });
             }
-            res.status(200).json(job);
+            const now = new Date();
+            const isExpired = (job === null || job === void 0 ? void 0 : job.deadline) ? new Date(job.deadline) < now : false;
+            const isClosed = (job === null || job === void 0 ? void 0 : job.status) === client_1.JobStatus.CLOSED ||
+                (job === null || job === void 0 ? void 0 : job.status) === client_1.JobStatus.DRAFT ||
+                (job === null || job === void 0 ? void 0 : job.status) === client_1.JobStatus.ARCHIVED;
+            res.status(200).json(Object.assign(Object.assign({}, job), { isExpired,
+                isClosed }));
         }
         catch (err) {
             next(err);
@@ -348,6 +340,25 @@ function getSavedJobsPaginatedController(req, res, next) {
         }
         catch (err) {
             res.status(400).json({ message: err.message });
+        }
+    });
+}
+function getNearbyJobsController(req, res, next) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const { lat, lng, radiusKm = 100, page = 1, pageSize = 10 } = req.query;
+            const numericRadiusKm = radiusKm !== undefined && !isNaN(Number(radiusKm))
+                ? Number(radiusKm)
+                : 100;
+            const numericLat = Number(lat);
+            const numericLng = Number(lng);
+            const numericPage = Number(page);
+            const numericPageSize = Number(pageSize);
+            const jobs = yield (0, job_service_1.getNearbyJobsService)(numericLat, numericLng, numericRadiusKm, numericPage, numericPageSize);
+            res.json({ jobs });
+        }
+        catch (err) {
+            next(err);
         }
     });
 }
