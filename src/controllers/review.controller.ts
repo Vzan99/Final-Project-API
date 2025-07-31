@@ -17,7 +17,8 @@ export const createReviewHandler = asyncHandler(
 export const getCompanyReviewsHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const companyId = req.params.id;
-    const reviews = await getCompanyReviews(companyId);
+    const { page = 1, pageSize = 3 } = (req as any).validatedQuery || {};
+    const reviews = await getCompanyReviews(companyId, page, pageSize);
     res.json(reviews);
   }
 );
