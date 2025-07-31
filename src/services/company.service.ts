@@ -1,3 +1,4 @@
+import { JobStatus } from "@prisma/client";
 import prisma from "../lib/prisma";
 
 interface GetAllCompaniesParams {
@@ -93,11 +94,16 @@ export async function getPublishedJobsByCompanyIdService(
   page: number = 1,
   pageSize: number = 5
 ) {
+  const now = new Date();
+
   const [jobs, total] = await Promise.all([
     prisma.job.findMany({
       where: {
         companyId,
-        status: "PUBLISHED",
+        status: JobStatus.PUBLISHED,
+        deadline: {
+          gt: now,
+        },
       },
       orderBy: {
         createdAt: "desc",
@@ -112,7 +118,10 @@ export async function getPublishedJobsByCompanyIdService(
     prisma.job.count({
       where: {
         companyId,
-        status: "PUBLISHED",
+        status: JobStatus.PUBLISHED,
+        deadline: {
+          gt: now,
+        },
       },
     }),
   ]);

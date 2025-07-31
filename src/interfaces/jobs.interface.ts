@@ -4,14 +4,13 @@ export interface JobWithRelations extends Job {
   company: Company & {
     admin: Pick<User, "id" | "name">;
   };
-  // category: Category | null; // ❌ HAPUS karena tidak ada relasi Category
 }
 
 export interface JobFilters {
   title?: string;
   location?: string;
-  employmentType?: string; // ✅ ganti dari jobType
-  jobCategory?: string; // ✅ tambahan baru untuk filter kategori pekerjaan
+  employmentType?: string;
+  jobCategory?: string;
   isRemote?: boolean;
   salaryMin?: number;
   salaryMax?: number;
@@ -20,6 +19,9 @@ export interface JobFilters {
   pageSize?: number;
   sortBy?: "createdAt" | "salary";
   sortOrder?: "asc" | "desc";
+  lat?: number;
+  lng?: number;
+  radiusKm?: number;
 
   listingTime?:
     | "any"

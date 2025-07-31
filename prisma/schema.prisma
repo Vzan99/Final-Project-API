@@ -100,14 +100,14 @@ model Job {
   isRemote         Boolean             @default(false)
   experienceLevel  String
   jobType          String?
-  employmentType EmploymentType @default(OTHER)
-  jobCategory JobCategory @default(OTHER)
+  employmentType   EmploymentType @default(OTHER)
+  jobCategory      JobCategory @default(OTHER)
   tags             String[]
   bannerUrl        String?
   hasTest          Boolean             @default(false)
   createdAt        DateTime            @default(now())
-  latitude Float?
-  longitude Float?
+  latitude         Float?
+  longitude        Float?
   company          Company             @relation(fields: [companyId], references: [id])
   companyId        String
   applications     Application[]
