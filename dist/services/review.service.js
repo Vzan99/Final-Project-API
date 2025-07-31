@@ -20,28 +20,37 @@ const createReview = (userId, input) => __awaiter(void 0, void 0, void 0, functi
     });
 });
 exports.createReview = createReview;
-const getCompanyReviews = (companyId) => __awaiter(void 0, void 0, void 0, function* () {
-    return prisma_1.default.companyReview.findMany({
-        where: { companyId, isVerified: true },
-        orderBy: { id: "desc" },
-        select: {
-            rating: true,
-            salaryEstimate: true,
-            content: true,
-            position: true,
-            isAnonymous: true,
-            cultureRating: true,
-            workLifeRating: true,
-            careerRating: true,
-            isVerified: true,
-            createdAt: true,
-            user: {
-                select: {
-                    name: true,
+const getCompanyReviews = (companyId, page, pageSize) => __awaiter(void 0, void 0, void 0, function* () {
+    const [reviews, total] = yield prisma_1.default.$transaction([
+        prisma_1.default.companyReview.findMany({
+            where: { companyId, isVerified: true },
+            orderBy: { createdAt: "desc" },
+            skip: (page - 1) * pageSize,
+            take: pageSize,
+            select: {
+                id: true,
+                rating: true,
+                salaryEstimate: true,
+                content: true,
+                position: true,
+                isAnonymous: true,
+                cultureRating: true,
+                workLifeRating: true,
+                careerRating: true,
+                isVerified: true,
+                createdAt: true,
+                user: {
+                    select: {
+                        name: true,
+                    },
                 },
             },
-        },
-    });
+        }),
+        prisma_1.default.companyReview.count({
+            where: { companyId, isVerified: true },
+        }),
+    ]);
+    return { reviews, total };
 });
 exports.getCompanyReviews = getCompanyReviews;
 const verifyReview = (id) => __awaiter(void 0, void 0, void 0, function* () {
