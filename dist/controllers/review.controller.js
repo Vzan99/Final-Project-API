@@ -19,7 +19,8 @@ exports.createReviewHandler = (0, asyncHandler_1.asyncHandler)((req, res) => __a
 }));
 exports.getCompanyReviewsHandler = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const companyId = req.params.id;
-    const reviews = yield (0, review_service_1.getCompanyReviews)(companyId);
+    const { page = 1, pageSize = 3 } = req.validatedQuery || {};
+    const reviews = yield (0, review_service_1.getCompanyReviews)(companyId, page, pageSize);
     res.json(reviews);
 }));
 exports.verifyReviewHandler = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
