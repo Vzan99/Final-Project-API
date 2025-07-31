@@ -17,6 +17,14 @@ import {
 } from "../middlewares/auth.middleware";
 import { Multer } from "../utils/multer";
 import { asyncHandler } from "../utils/asyncHandler";
+import ReqValidator from "../middlewares/reqValidator.middleware";
+import ParamsValidator from "../middlewares/paramsValidator.middleware";
+import {
+  createSubscriptionSchema,
+  midtransTokenSchema,
+  subscriptionIdParamSchema,
+  midtransWebhookSchema,
+} from "../schema/subscription.schema";
 
 const upload = Multer();
 const router = Router();
@@ -24,7 +32,11 @@ const router = Router();
 // Developer-only Routes
 router.use("/developer", VerifyToken, DeveloperGuard);
 router.get("/developer", asyncHandler(getSubscriptions));
-router.patch("/developer/:id/approve", asyncHandler(approveSubscription));
+router.patch(
+  "/developer/:id/approve",
+  ParamsValidator(subscriptionIdParamSchema),
+  asyncHandler(approveSubscription)
+);
 router.get("/developer/analytics", asyncHandler(getSubscriptionAnalytics));
 
 // User-only Routes
@@ -46,16 +58,22 @@ router.post(
   VerifyToken,
   UserGuard,
   upload.single("paymentProof"),
+  ReqValidator(createSubscriptionSchema),
   asyncHandler(subscribe)
 );
 router.post(
   "/user/midtrans/token",
   VerifyToken,
   UserGuard,
+  ReqValidator(midtransTokenSchema),
   asyncHandler(createMidtransTransaction)
 );
 
 // Midtrans webhook (no token)
-router.post("/webhook/midtrans", asyncHandler(midtransWebhookHandler));
+router.post(
+  "/webhook/midtrans",
+  ReqValidator(midtransWebhookSchema),
+  asyncHandler(midtransWebhookHandler)
+);
 
 export default router;
