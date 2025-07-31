@@ -15,7 +15,6 @@ import {
   deleteJobHandler,
   updateJobStatusHandler,
   getJobsHandler,
-  getAllCategoriesHandler,
   getSavedJobsController,
   checkIsJobSavedHandler,
   saveJobHandler,
@@ -25,6 +24,7 @@ import {
   applyJobHandler,
   getJobDetailViewController,
   getSavedJobsPaginatedController,
+  getNearbyJobsController,
 } from "../controllers/job.controller";
 import {
   createJobSchema,
@@ -32,17 +32,22 @@ import {
   publishJobSchema,
   jobFiltersSchema,
   PaginationSchema,
+  nearbyJobsQuerySchema,
 } from "../schema/job.schema";
 
 const router = Router();
 
 router.get("/public", QueryValidator(jobFiltersSchema), getJobsHandler);
 
-router.get("/categories", getAllCategoriesHandler);
-
 router.get("/filters/meta", getJobFiltersMetaHandler);
 
 router.get("/saved", VerifyToken, UserGuard, getSavedJobsController);
+
+router.get(
+  "/nearby",
+  QueryValidator(nearbyJobsQuerySchema),
+  getNearbyJobsController
+);
 
 router.get(
   "/saved/paginated",
@@ -80,15 +85,16 @@ router.patch(
   updateJobStatusHandler
 );
 
-router.get("/:id/is-saved", VerifyToken, checkIsJobSavedHandler);
+router.get("/:id/is-saved", VerifyToken, UserGuard, checkIsJobSavedHandler);
 
-router.post("/:id/save", VerifyToken, saveJobHandler);
+router.post("/:id/save", VerifyToken, UserGuard, saveJobHandler);
 
-router.delete("/:id/save", VerifyToken, removeSavedJobHandler);
+router.delete("/:id/save", VerifyToken, UserGuard, removeSavedJobHandler);
 
 router.post(
   "/:id/apply",
   VerifyToken,
+  UserGuard,
   Multer().single("resume"),
   applyJobHandler
 );

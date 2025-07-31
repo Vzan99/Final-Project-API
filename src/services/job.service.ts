@@ -1,4 +1,6 @@
 import prisma from "../lib/prisma";
+import { Prisma } from "@prisma/client";
+
 import { JobStatus, JobCategory } from "@prisma/client";
 import {
   CreateJobInput,
@@ -12,6 +14,7 @@ import {
   JobWithRelations,
 } from "../interfaces/jobs.interface";
 import { EmploymentType, LocationType } from "@prisma/client";
+import { startOfToday, subDays } from "date-fns";
 
 export async function createJob(adminId: string, data: CreateJobInput) {
   const company = await prisma.company.findUnique({
@@ -227,8 +230,6 @@ export async function updateJobStatus(
   return updated;
 }
 
-import { startOfToday, subDays } from "date-fns";
-
 export async function getJobsWithFilters(
   filters: JobFilters
 ): Promise<PaginatedJobs> {
@@ -248,38 +249,32 @@ export async function getJobsWithFilters(
     listingTime = "any",
     customStartDate,
     customEndDate,
+    lat,
+    lng,
+    radiusKm = 100,
   } = filters;
 
   const skip = (page - 1) * pageSize;
   const andFilters: any[] = [];
 
-  if (title) {
-    andFilters.push({
-      title: { contains: title, mode: "insensitive" },
-    });
-  }
-
-  if (location) {
-    andFilters.push({
-      location: { contains: location, mode: "insensitive" },
-    });
-  }
-
-  if (Array.isArray(employmentType) && employmentType.length > 0) {
+  // Basic filters...
+  if (title)
+    andFilters.push({ title: { contains: title, mode: "insensitive" } });
+  if (location)
+    andFilters.push({ location: { contains: location, mode: "insensitive" } });
+  if (Array.isArray(employmentType) && employmentType.length > 0)
     andFilters.push({ employmentType: { in: employmentType } });
-  }
-  if (Array.isArray(jobCategory) && jobCategory.length > 0) {
+  if (Array.isArray(jobCategory) && jobCategory.length > 0)
     andFilters.push({ jobCategory: { in: jobCategory } });
-  }
   if (typeof isRemote === "boolean") andFilters.push({ isRemote });
   if (salaryMin !== undefined) andFilters.push({ salary: { gte: salaryMin } });
   if (salaryMax !== undefined) andFilters.push({ salary: { lte: salaryMax } });
-  if (experienceLevel) {
+  if (experienceLevel)
     andFilters.push({
       experienceLevel: { contains: experienceLevel, mode: "insensitive" },
     });
-  }
 
+  // Listing time filter
   if (listingTime !== "any") {
     let gteDate: Date | undefined;
     let lteDate: Date | undefined;
@@ -306,42 +301,80 @@ export async function getJobsWithFilters(
         break;
     }
 
-    if (gteDate || lteDate) {
-      const createdAtFilter: any = {};
-      if (gteDate) createdAtFilter.gte = gteDate;
-      if (lteDate) createdAtFilter.lte = lteDate;
+    const createdAtFilter: any = {};
+    if (gteDate) createdAtFilter.gte = gteDate;
+    if (lteDate) createdAtFilter.lte = lteDate;
+    if (Object.keys(createdAtFilter).length)
       andFilters.push({ createdAt: createdAtFilter });
-    }
   }
 
-  const allowedSortBy = ["createdAt", "salary"];
-  const allowedSortOrder = ["asc", "desc"];
-  const sortField = allowedSortBy.includes(sortBy) ? sortBy : "createdAt";
-  const sortDir = allowedSortOrder.includes(sortOrder) ? sortOrder : "desc";
+  const now = new Date();
 
-  const where = {
+  const baseWhere = {
     AND: [
-      ...(andFilters.length > 0 ? andFilters : []),
-      { status: "PUBLISHED" },
+      ...(andFilters.length ? andFilters : []),
+      { status: JobStatus.PUBLISHED },
+      { deadline: { gte: now } },
     ],
   };
 
+  const sortField = ["createdAt", "salary"].includes(sortBy)
+    ? sortBy
+    : "createdAt";
+  const sortDir = ["asc", "desc"].includes(sortOrder) ? sortOrder : "desc";
+
+  // If lat/lng is provided, do post-query filtering
+  if (lat !== undefined && lng !== undefined) {
+    const allJobs = await prisma.job.findMany({
+      where: {
+        ...baseWhere,
+        latitude: { not: null },
+        longitude: { not: null },
+      },
+      include: {
+        company: {
+          include: {
+            admin: { select: { id: true, name: true } },
+          },
+        },
+      },
+      orderBy: { [sortField]: sortDir },
+    });
+
+    // Distance calculation
+    const toRadians = (deg: number) => (deg * Math.PI) / 180;
+    const jobsInRadius = allJobs.filter((j) => {
+      const dist =
+        6371 *
+        Math.acos(
+          Math.cos(toRadians(lat)) *
+            Math.cos(toRadians(j.latitude!)) *
+            Math.cos(toRadians(j.longitude!) - toRadians(lng)) +
+            Math.sin(toRadians(lat)) * Math.sin(toRadians(j.latitude!))
+        );
+      return dist <= radiusKm;
+    });
+
+    const paginated = jobsInRadius.slice(skip, skip + pageSize);
+
+    return {
+      total: jobsInRadius.length,
+      jobs: paginated,
+    };
+  }
+
+  // If no lat/lng filter, do normal paginated query
   const [total, jobs] = await Promise.all([
-    prisma.job.count({ where }),
+    prisma.job.count({ where: baseWhere }),
     prisma.job.findMany({
-      where,
+      where: baseWhere,
       orderBy: { [sortField]: sortDir },
       skip,
       take: pageSize,
       include: {
         company: {
           include: {
-            admin: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
+            admin: { select: { id: true, name: true } },
           },
         },
       },
@@ -351,20 +384,6 @@ export async function getJobsWithFilters(
   return { total, jobs };
 }
 
-export function getAllJobCategories() {
-  return [
-    { value: "FRONTEND_DEVELOPER", label: "Frontend Developer" },
-    { value: "BACKEND_DEVELOPER", label: "Backend Developer" },
-    { value: "FULL_STACK_DEVELOPER", label: "Full Stack Developer" },
-    { value: "MOBILE_APP_DEVELOPER", label: "Mobile App Developer" },
-    { value: "DEVOPS_ENGINEER", label: "DevOps Engineer" },
-    { value: "GAME_DEVELOPER", label: "Game Developer" },
-    { value: "SOFTWARE_ENGINEER", label: "Software Engineer" },
-    { value: "DATA_ENGINEER", label: "Data Engineer" },
-    { value: "SECURITY_ENGINEER", label: "Security Engineer" },
-    { value: "OTHER", label: "Other" },
-  ];
-}
 export async function getSavedJobsByUser(
   userId: string
 ): Promise<JobWithRelations[]> {
@@ -510,6 +529,9 @@ export async function GetSuggestedJobService(
       companyId,
       id: excludeJobId ? { not: excludeJobId } : undefined,
       status: "PUBLISHED",
+      deadline: {
+        gte: new Date(),
+      },
     },
     orderBy: { createdAt: "desc" },
     take: 3,
@@ -521,7 +543,7 @@ export async function GetSuggestedJobService(
   });
 }
 
-export async function applyJob(
+export async function applyJobService(
   jobId: string,
   userId: string,
   data: ApplyJobInput
@@ -533,12 +555,23 @@ export async function applyJob(
 
   if (!job) throw new Error("Job not found");
 
+  if (job.status !== JobStatus.PUBLISHED) {
+    throw new Error("You cannot apply to this job");
+  }
+
+  const now = new Date();
+  if (job.deadline && new Date(job.deadline) < now) {
+    throw new Error("This job has expired");
+  }
+
   const existing = await prisma.application.findFirst({
     where: { jobId, userId },
   });
+
   if (existing) throw new Error("You have already applied to this job");
 
   let testScore: number | undefined = undefined;
+
   if (job.hasTest && job.preSelectionTest) {
     const answer = await prisma.preSelectionAnswer.findUnique({
       where: {
@@ -551,6 +584,7 @@ export async function applyJob(
 
     if (!answer)
       throw new Error("Please complete the pre-selection test before applying");
+
     testScore = answer.score;
   }
 
@@ -618,4 +652,63 @@ export async function getSavedJobsByUserPaginated(
   ]);
 
   return { total, jobs: saved.map((s) => s.job) };
+}
+
+export async function getNearbyJobsService(
+  lat: number,
+  lng: number,
+  radiusKm = 100,
+  page = 1,
+  pageSize = 10
+) {
+  const offset = (page - 1) * pageSize;
+
+  const allJobs = await prisma.job.findMany({
+    where: {
+      status: "PUBLISHED",
+      latitude: { not: null },
+      longitude: { not: null },
+    },
+    include: {
+      company: {
+        include: {
+          admin: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    skip: offset,
+    take: pageSize,
+  });
+
+  const nearby = allJobs.filter((j) => {
+    const radians = (deg: number) => (deg * Math.PI) / 180;
+    const dist =
+      6371 *
+      Math.acos(
+        Math.cos(radians(lat)) *
+          Math.cos(radians(j.latitude!)) *
+          Math.cos(radians(j.longitude!) - radians(lng)) +
+          Math.sin(radians(lat)) * Math.sin(radians(j.latitude!))
+      );
+    return dist <= radiusKm;
+  });
+
+  return nearby.map((j) => ({
+    id: j.id,
+    title: j.title,
+    description: j.description,
+    location: j.location,
+    salary: j.salary,
+    latitude: j.latitude!,
+    longitude: j.longitude!,
+    createdAt: j.createdAt,
+    company: {
+      id: j.company.id,
+      logo: j.company.logo,
+      admin: {
+        name: j.company.admin.name,
+      },
+    },
+  }));
 }

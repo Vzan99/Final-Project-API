@@ -8,19 +8,20 @@ import {
   deleteJobById,
   updateJobStatus,
   getJobsWithFilters,
-  getAllJobCategories,
   getSavedJobsByUser,
   isJobSavedByUser,
   saveJobService,
   removeSavedJob,
   getJobFiltersMetaService,
   GetSuggestedJobService,
-  applyJob,
+  applyJobService,
   getJobDetailsService,
   getSavedJobsByUserPaginated,
+  getNearbyJobsService,
 } from "../services/job.service";
 import type { JobFilters } from "../interfaces/jobs.interface";
 import { createJobSchema, applyJobSchema } from "../schema/job.schema";
+import { JobStatus } from "@prisma/client";
 
 export async function createJobHandler(
   req: Request,
@@ -238,24 +239,6 @@ export async function getJobsHandler(
   }
 }
 
-export async function getAllCategoriesHandler(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  try {
-    const categories = await getAllJobCategories();
-
-    res.status(200).json({
-      success: true,
-      message: "Categories fetched successfully",
-      data: categories,
-    });
-  } catch (err) {
-    next(err);
-  }
-}
-
 export async function getSavedJobsController(
   req: Request,
   res: Response,
@@ -406,7 +389,7 @@ export async function applyJobHandler(
     const result = await cloudinaryUpload(file, "raw");
     const cvFileUrl = result.secure_url;
 
-    const application = await applyJob(jobId, userId, {
+    const application = await applyJobService(jobId, userId, {
       expectedSalary: parsed.data.expectedSalary,
       coverLetter,
       cvFile: cvFileUrl,
@@ -429,10 +412,21 @@ export async function getJobDetailViewController(
     const job = await getJobDetailsService(jobId);
 
     if (!job) {
-      throw new Error("Job not found");
+      res.status(404).json({ message: "Job not found" });
     }
 
-    res.status(200).json(job);
+    const now = new Date();
+    const isExpired = job?.deadline ? new Date(job.deadline) < now : false;
+    const isClosed =
+      job?.status === JobStatus.CLOSED ||
+      job?.status === JobStatus.DRAFT ||
+      job?.status === JobStatus.ARCHIVED;
+
+    res.status(200).json({
+      ...job,
+      isExpired,
+      isClosed,
+    });
   } catch (err) {
     next(err);
   }
@@ -455,5 +449,37 @@ export async function getSavedJobsPaginatedController(
     res.status(200).json(result);
   } catch (err: any) {
     res.status(400).json({ message: err.message });
+  }
+}
+
+export async function getNearbyJobsController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const { lat, lng, radiusKm = 100, page = 1, pageSize = 10 } = req.query;
+
+    const numericRadiusKm =
+      radiusKm !== undefined && !isNaN(Number(radiusKm))
+        ? Number(radiusKm)
+        : 100;
+
+    const numericLat = Number(lat);
+    const numericLng = Number(lng);
+    const numericPage = Number(page);
+    const numericPageSize = Number(pageSize);
+
+    const jobs = await getNearbyJobsService(
+      numericLat,
+      numericLng,
+      numericRadiusKm,
+      numericPage,
+      numericPageSize
+    );
+
+    res.json({ jobs });
+  } catch (err) {
+    next(err);
   }
 }

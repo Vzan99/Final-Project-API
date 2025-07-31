@@ -128,7 +128,7 @@ export const jobFiltersSchema = z.object({
       }
     )
     .transform((val) => (val ? Number(val) : 10)),
-  sortBy: z.enum(["createdAt", "salary", "relevance"]).optional(),
+  sortBy: z.enum(["createdAt", "salary", "nearby"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
   lat: z
     .string()
@@ -142,6 +142,13 @@ export const jobFiltersSchema = z.object({
     .optional()
     .refine((val) => !val || !isNaN(Number(val)), {
       message: "lng must be a number",
+    })
+    .transform((val) => (val ? Number(val) : undefined)),
+  radiusKm: z
+    .string()
+    .optional()
+    .refine((val) => !val || !isNaN(Number(val)), {
+      message: "radiusKm must be a number",
     })
     .transform((val) => (val ? Number(val) : undefined)),
 
@@ -197,4 +204,18 @@ export const PaginationSchema = z.object({
       }
     )
     .transform((val) => (val ? Number(val) : 10)),
+});
+
+export const nearbyJobsQuerySchema = z.object({
+  lat: z.coerce.number({
+    required_error: "Latitude is required",
+    invalid_type_error: "Latitude must be a number",
+  }),
+  lng: z.coerce.number({
+    required_error: "Longitude is required",
+    invalid_type_error: "Longitude must be a number",
+  }),
+  radiusKm: z.coerce.number().min(1).max(500).default(50).optional(),
+  page: z.coerce.number().min(1).default(1).optional(),
+  pageSize: z.coerce.number().min(1).max(50).default(10).optional(),
 });
