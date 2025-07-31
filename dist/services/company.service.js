@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GetAllCompaniesService = GetAllCompaniesService;
 exports.getCompanyByIdService = getCompanyByIdService;
 exports.getPublishedJobsByCompanyIdService = getPublishedJobsByCompanyIdService;
+const client_1 = require("@prisma/client");
 const prisma_1 = __importDefault(require("../lib/prisma"));
 function GetAllCompaniesService(params) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -83,11 +84,15 @@ function getCompanyByIdService(companyId) {
 }
 function getPublishedJobsByCompanyIdService(companyId_1) {
     return __awaiter(this, arguments, void 0, function* (companyId, page = 1, pageSize = 5) {
+        const now = new Date();
         const [jobs, total] = yield Promise.all([
             prisma_1.default.job.findMany({
                 where: {
                     companyId,
-                    status: "PUBLISHED",
+                    status: client_1.JobStatus.PUBLISHED,
+                    deadline: {
+                        gt: now,
+                    },
                 },
                 orderBy: {
                     createdAt: "desc",
@@ -102,7 +107,10 @@ function getPublishedJobsByCompanyIdService(companyId_1) {
             prisma_1.default.job.count({
                 where: {
                     companyId,
-                    status: "PUBLISHED",
+                    status: client_1.JobStatus.PUBLISHED,
+                    deadline: {
+                        gt: now,
+                    },
                 },
             }),
         ]);

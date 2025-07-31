@@ -30,19 +30,20 @@ exports.updateJobById = updateJobById;
 exports.deleteJobById = deleteJobById;
 exports.updateJobStatus = updateJobStatus;
 exports.getJobsWithFilters = getJobsWithFilters;
-exports.getAllJobCategories = getAllJobCategories;
 exports.getSavedJobsByUser = getSavedJobsByUser;
 exports.isJobSavedByUser = isJobSavedByUser;
 exports.saveJobService = saveJobService;
 exports.removeSavedJob = removeSavedJob;
 exports.getJobFiltersMetaService = getJobFiltersMetaService;
 exports.GetSuggestedJobService = GetSuggestedJobService;
-exports.applyJob = applyJob;
+exports.applyJobService = applyJobService;
 exports.getJobDetailsService = getJobDetailsService;
 exports.getSavedJobsByUserPaginated = getSavedJobsByUserPaginated;
+exports.getNearbyJobsService = getNearbyJobsService;
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const client_1 = require("@prisma/client");
 const client_2 = require("@prisma/client");
+const date_fns_1 = require("date-fns");
 function createJob(adminId, data) {
     return __awaiter(this, void 0, void 0, function* () {
         const company = yield prisma_1.default.company.findUnique({
@@ -195,39 +196,31 @@ function updateJobStatus(jobId, adminId, data) {
         return updated;
     });
 }
-const date_fns_1 = require("date-fns");
 function getJobsWithFilters(filters) {
     return __awaiter(this, void 0, void 0, function* () {
-        const { title, location, employmentType, jobCategory, isRemote, salaryMin, salaryMax, experienceLevel, page = 1, pageSize = 10, sortBy = "createdAt", sortOrder = "desc", listingTime = "any", customStartDate, customEndDate, } = filters;
+        const { title, location, employmentType, jobCategory, isRemote, salaryMin, salaryMax, experienceLevel, page = 1, pageSize = 10, sortBy = "createdAt", sortOrder = "desc", listingTime = "any", customStartDate, customEndDate, lat, lng, radiusKm = 100, } = filters;
         const skip = (page - 1) * pageSize;
         const andFilters = [];
-        if (title) {
-            andFilters.push({
-                title: { contains: title, mode: "insensitive" },
-            });
-        }
-        if (location) {
-            andFilters.push({
-                location: { contains: location, mode: "insensitive" },
-            });
-        }
-        if (Array.isArray(employmentType) && employmentType.length > 0) {
+        // Basic filters...
+        if (title)
+            andFilters.push({ title: { contains: title, mode: "insensitive" } });
+        if (location)
+            andFilters.push({ location: { contains: location, mode: "insensitive" } });
+        if (Array.isArray(employmentType) && employmentType.length > 0)
             andFilters.push({ employmentType: { in: employmentType } });
-        }
-        if (Array.isArray(jobCategory) && jobCategory.length > 0) {
+        if (Array.isArray(jobCategory) && jobCategory.length > 0)
             andFilters.push({ jobCategory: { in: jobCategory } });
-        }
         if (typeof isRemote === "boolean")
             andFilters.push({ isRemote });
         if (salaryMin !== undefined)
             andFilters.push({ salary: { gte: salaryMin } });
         if (salaryMax !== undefined)
             andFilters.push({ salary: { lte: salaryMax } });
-        if (experienceLevel) {
+        if (experienceLevel)
             andFilters.push({
                 experienceLevel: { contains: experienceLevel, mode: "insensitive" },
             });
-        }
+        // Listing time filter
         if (listingTime !== "any") {
             let gteDate;
             let lteDate;
@@ -254,41 +247,67 @@ function getJobsWithFilters(filters) {
                         lteDate = new Date(customEndDate);
                     break;
             }
-            if (gteDate || lteDate) {
-                const createdAtFilter = {};
-                if (gteDate)
-                    createdAtFilter.gte = gteDate;
-                if (lteDate)
-                    createdAtFilter.lte = lteDate;
+            const createdAtFilter = {};
+            if (gteDate)
+                createdAtFilter.gte = gteDate;
+            if (lteDate)
+                createdAtFilter.lte = lteDate;
+            if (Object.keys(createdAtFilter).length)
                 andFilters.push({ createdAt: createdAtFilter });
-            }
         }
-        const allowedSortBy = ["createdAt", "salary"];
-        const allowedSortOrder = ["asc", "desc"];
-        const sortField = allowedSortBy.includes(sortBy) ? sortBy : "createdAt";
-        const sortDir = allowedSortOrder.includes(sortOrder) ? sortOrder : "desc";
-        const where = {
+        const now = new Date();
+        const baseWhere = {
             AND: [
-                ...(andFilters.length > 0 ? andFilters : []),
-                { status: "PUBLISHED" },
+                ...(andFilters.length ? andFilters : []),
+                { status: client_1.JobStatus.PUBLISHED },
+                { deadline: { gte: now } },
             ],
         };
+        const sortField = ["createdAt", "salary"].includes(sortBy)
+            ? sortBy
+            : "createdAt";
+        const sortDir = ["asc", "desc"].includes(sortOrder) ? sortOrder : "desc";
+        // If lat/lng is provided, do post-query filtering
+        if (lat !== undefined && lng !== undefined) {
+            const allJobs = yield prisma_1.default.job.findMany({
+                where: Object.assign(Object.assign({}, baseWhere), { latitude: { not: null }, longitude: { not: null } }),
+                include: {
+                    company: {
+                        include: {
+                            admin: { select: { id: true, name: true } },
+                        },
+                    },
+                },
+                orderBy: { [sortField]: sortDir },
+            });
+            // Distance calculation
+            const toRadians = (deg) => (deg * Math.PI) / 180;
+            const jobsInRadius = allJobs.filter((j) => {
+                const dist = 6371 *
+                    Math.acos(Math.cos(toRadians(lat)) *
+                        Math.cos(toRadians(j.latitude)) *
+                        Math.cos(toRadians(j.longitude) - toRadians(lng)) +
+                        Math.sin(toRadians(lat)) * Math.sin(toRadians(j.latitude)));
+                return dist <= radiusKm;
+            });
+            const paginated = jobsInRadius.slice(skip, skip + pageSize);
+            return {
+                total: jobsInRadius.length,
+                jobs: paginated,
+            };
+        }
+        // If no lat/lng filter, do normal paginated query
         const [total, jobs] = yield Promise.all([
-            prisma_1.default.job.count({ where }),
+            prisma_1.default.job.count({ where: baseWhere }),
             prisma_1.default.job.findMany({
-                where,
+                where: baseWhere,
                 orderBy: { [sortField]: sortDir },
                 skip,
                 take: pageSize,
                 include: {
                     company: {
                         include: {
-                            admin: {
-                                select: {
-                                    id: true,
-                                    name: true,
-                                },
-                            },
+                            admin: { select: { id: true, name: true } },
                         },
                     },
                 },
@@ -296,20 +315,6 @@ function getJobsWithFilters(filters) {
         ]);
         return { total, jobs };
     });
-}
-function getAllJobCategories() {
-    return [
-        { value: "FRONTEND_DEVELOPER", label: "Frontend Developer" },
-        { value: "BACKEND_DEVELOPER", label: "Backend Developer" },
-        { value: "FULL_STACK_DEVELOPER", label: "Full Stack Developer" },
-        { value: "MOBILE_APP_DEVELOPER", label: "Mobile App Developer" },
-        { value: "DEVOPS_ENGINEER", label: "DevOps Engineer" },
-        { value: "GAME_DEVELOPER", label: "Game Developer" },
-        { value: "SOFTWARE_ENGINEER", label: "Software Engineer" },
-        { value: "DATA_ENGINEER", label: "Data Engineer" },
-        { value: "SECURITY_ENGINEER", label: "Security Engineer" },
-        { value: "OTHER", label: "Other" },
-    ];
 }
 function getSavedJobsByUser(userId) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -441,6 +446,9 @@ function GetSuggestedJobService(companyId, excludeJobId) {
                 companyId,
                 id: excludeJobId ? { not: excludeJobId } : undefined,
                 status: "PUBLISHED",
+                deadline: {
+                    gte: new Date(),
+                },
             },
             orderBy: { createdAt: "desc" },
             take: 3,
@@ -452,7 +460,7 @@ function GetSuggestedJobService(companyId, excludeJobId) {
         });
     });
 }
-function applyJob(jobId, userId, data) {
+function applyJobService(jobId, userId, data) {
     return __awaiter(this, void 0, void 0, function* () {
         const job = yield prisma_1.default.job.findUnique({
             where: { id: jobId },
@@ -460,6 +468,13 @@ function applyJob(jobId, userId, data) {
         });
         if (!job)
             throw new Error("Job not found");
+        if (job.status !== client_1.JobStatus.PUBLISHED) {
+            throw new Error("You cannot apply to this job");
+        }
+        const now = new Date();
+        if (job.deadline && new Date(job.deadline) < now) {
+            throw new Error("This job has expired");
+        }
         const existing = yield prisma_1.default.application.findFirst({
             where: { jobId, userId },
         });
@@ -538,5 +553,53 @@ function getSavedJobsByUserPaginated(userId, page, pageSize) {
             }),
         ]);
         return { total, jobs: saved.map((s) => s.job) };
+    });
+}
+function getNearbyJobsService(lat_1, lng_1) {
+    return __awaiter(this, arguments, void 0, function* (lat, lng, radiusKm = 100, page = 1, pageSize = 10) {
+        const offset = (page - 1) * pageSize;
+        const allJobs = yield prisma_1.default.job.findMany({
+            where: {
+                status: "PUBLISHED",
+                latitude: { not: null },
+                longitude: { not: null },
+            },
+            include: {
+                company: {
+                    include: {
+                        admin: true,
+                    },
+                },
+            },
+            orderBy: { createdAt: "desc" },
+            skip: offset,
+            take: pageSize,
+        });
+        const nearby = allJobs.filter((j) => {
+            const radians = (deg) => (deg * Math.PI) / 180;
+            const dist = 6371 *
+                Math.acos(Math.cos(radians(lat)) *
+                    Math.cos(radians(j.latitude)) *
+                    Math.cos(radians(j.longitude) - radians(lng)) +
+                    Math.sin(radians(lat)) * Math.sin(radians(j.latitude)));
+            return dist <= radiusKm;
+        });
+        return nearby.map((j) => ({
+            id: j.id,
+            title: j.title,
+            description: j.description,
+            location: j.location,
+            salary: j.salary,
+            latitude: j.latitude,
+            longitude: j.longitude,
+            createdAt: j.createdAt,
+            company: {
+                id: j.company.id,
+                logo: j.company.logo,
+                admin: {
+                    name: j.company.admin.name,
+                },
+            },
+        }));
     });
 }
