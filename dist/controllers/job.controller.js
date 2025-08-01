@@ -38,7 +38,7 @@ function createJobHandler(req, res, next) {
                     ? Array.isArray(req.body.tags)
                         ? req.body.tags
                         : [req.body.tags]
-                    : [] });
+                    : [], latitude: req.body.latitude ? Number(req.body.latitude) : undefined, longitude: req.body.longitude ? Number(req.body.longitude) : undefined });
             const parsed = job_schema_1.createJobSchema.parse(raw);
             let bannerUrl = undefined;
             if (req.file) {
@@ -103,7 +103,7 @@ function updateJobHandler(req, res, next) {
             const jobId = req.params.id;
             const adminId = req.user.id;
             let raw = typeof req.body.data === "string" ? JSON.parse(req.body.data) : req.body;
-            const parsed = Object.assign(Object.assign({}, raw), { salary: raw.salary ? Number(raw.salary) : undefined, isRemote: raw.isRemote === "true" || raw.isRemote === true, hasTest: raw.hasTest === "true" || raw.hasTest === true, tags: Array.isArray(raw.tags) ? raw.tags : raw.tags ? [raw.tags] : [] });
+            const parsed = Object.assign(Object.assign({}, raw), { salary: raw.salary ? Number(raw.salary) : undefined, isRemote: raw.isRemote === "true" || raw.isRemote === true, hasTest: raw.hasTest === "true" || raw.hasTest === true, tags: Array.isArray(raw.tags) ? raw.tags : raw.tags ? [raw.tags] : [], latitude: raw.latitude ? Number(raw.latitude) : undefined, longitude: raw.longitude ? Number(raw.longitude) : undefined });
             let bannerUrl;
             if (req.file) {
                 const uploaded = yield (0, cloudinary_1.cloudinaryUpload)(req.file, "image");

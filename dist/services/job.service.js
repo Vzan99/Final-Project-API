@@ -201,7 +201,6 @@ function getJobsWithFilters(filters) {
         const { title, location, employmentType, jobCategory, isRemote, salaryMin, salaryMax, experienceLevel, page = 1, pageSize = 10, sortBy = "createdAt", sortOrder = "desc", listingTime = "any", customStartDate, customEndDate, lat, lng, radiusKm = 100, } = filters;
         const skip = (page - 1) * pageSize;
         const andFilters = [];
-        // Basic filters...
         if (title)
             andFilters.push({ title: { contains: title, mode: "insensitive" } });
         if (location)
@@ -220,13 +219,12 @@ function getJobsWithFilters(filters) {
             andFilters.push({
                 experienceLevel: { contains: experienceLevel, mode: "insensitive" },
             });
-        // Listing time filter
         if (listingTime !== "any") {
             let gteDate;
             let lteDate;
             switch (listingTime) {
                 case "today":
-                    gteDate = (0, date_fns_1.startOfToday)();
+                    gteDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
                     break;
                 case "3days":
                     gteDate = (0, date_fns_1.subDays)(new Date(), 3);
@@ -267,7 +265,6 @@ function getJobsWithFilters(filters) {
             ? sortBy
             : "createdAt";
         const sortDir = ["asc", "desc"].includes(sortOrder) ? sortOrder : "desc";
-        // If lat/lng is provided, do post-query filtering
         if (lat !== undefined && lng !== undefined) {
             const allJobs = yield prisma_1.default.job.findMany({
                 where: Object.assign(Object.assign({}, baseWhere), { latitude: { not: null }, longitude: { not: null } }),
@@ -280,7 +277,6 @@ function getJobsWithFilters(filters) {
                 },
                 orderBy: { [sortField]: sortDir },
             });
-            // Distance calculation
             const toRadians = (deg) => (deg * Math.PI) / 180;
             const jobsInRadius = allJobs.filter((j) => {
                 const dist = 6371 *
@@ -296,7 +292,6 @@ function getJobsWithFilters(filters) {
                 jobs: paginated,
             };
         }
-        // If no lat/lng filter, do normal paginated query
         const [total, jobs] = yield Promise.all([
             prisma_1.default.job.count({ where: baseWhere }),
             prisma_1.default.job.findMany({

@@ -36,6 +36,8 @@ exports.createJobSchema = zod_1.z.object({
     tags: zod_1.z.array(zod_1.z.string()).optional(),
     bannerUrl: zod_1.z.string().optional(),
     hasTest: zod_1.z.boolean().optional().default(false),
+    latitude: zod_1.z.number().optional(),
+    longitude: zod_1.z.number().optional(),
 });
 exports.updateJobSchema = zod_1.z.object({
     title: zod_1.z.string().optional(),
@@ -68,11 +70,39 @@ exports.jobFiltersSchema = zod_1.z.object({
     employmentType: zod_1.z
         .union([zod_1.z.string(), zod_1.z.array(zod_1.z.string())])
         .optional()
-        .transform((val) => typeof val === "string" ? [val] : Array.isArray(val) ? val : []),
+        .transform((val) => {
+        if (typeof val === "string") {
+            if (val.includes(",")) {
+                return val
+                    .split(",")
+                    .map((v) => v.trim())
+                    .filter(Boolean);
+            }
+            return [val];
+        }
+        if (Array.isArray(val)) {
+            return val;
+        }
+        return [];
+    }),
     jobCategory: zod_1.z
         .union([zod_1.z.string(), zod_1.z.array(zod_1.z.string())])
         .optional()
-        .transform((val) => typeof val === "string" ? [val] : Array.isArray(val) ? val : []),
+        .transform((val) => {
+        if (typeof val === "string") {
+            if (val.includes(",")) {
+                return val
+                    .split(",")
+                    .map((v) => v.trim())
+                    .filter(Boolean);
+            }
+            return [val];
+        }
+        if (Array.isArray(val)) {
+            return val;
+        }
+        return [];
+    }),
     isRemote: zod_1.z
         .string()
         .optional()
