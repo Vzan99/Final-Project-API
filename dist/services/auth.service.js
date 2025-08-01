@@ -63,14 +63,44 @@ function RegisterUserService(param) {
                 expiresAt: (0, date_fns_1.addHours)(new Date(), 1),
             },
         });
-        const templatePath = path_1.default.join(__dirname, "../templates/verifyEmail.hbs");
-        const source = fs_1.default.readFileSync(templatePath, "utf-8");
-        const emailTemplate = handlebars_1.default.compile(source);
-        const html = emailTemplate({
-            name: nameFromEmail,
-            verificationLink: `${config_1.FE_URL}/auth/verify-email?token=${token}`,
-            year: new Date().getFullYear(),
-        });
+        const html = `
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Email Verification</title>
+    <style>
+      body { background-color: #f1f0e8; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+      .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+      .header { background-color: #89a8b2; padding: 20px; text-align: center; color: white; }
+      .header h1 { margin: 0; font-size: 24px; }
+      .content { padding: 30px 20px; color: #333333; background-color: #f1f0e8; }
+      .content h2 { font-size: 20px; margin-bottom: 10px; }
+      .content p { font-size: 16px; line-height: 1.6; }
+      .btn-container { text-align: center; margin: 30px 0; }
+      .verify-btn { background-color: #89a8b2; color: #ffffff !important; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; display: inline-block; font-weight: bold; }
+      .footer { font-size: 12px; color: #999999; text-align: center; padding: 20px; background-color: #ffffff; }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="header">
+        <h1>Email Verification</h1>
+      </div>
+      <div class="content">
+        <h2>Hello ${nameFromEmail},</h2>
+        <p>Thank you for signing up with Precise. To complete your registration, please verify your email by clicking the button below.</p>
+        <div class="btn-container">
+          <a href="${config_1.FE_URL}/auth/verify-email?token=${token}" class="verify-btn">Verify My Email</a>
+        </div>
+        <p>This link will expire in 1 hour. If you did not request this, please ignore this email.</p>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} Precise. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>
+`;
         yield (0, nodemailer_1.sendEmail)({
             to: param.email,
             subject: "Verify Your Email",
@@ -106,14 +136,44 @@ function RegisterAdminService(param) {
                 expiresAt: (0, date_fns_1.addHours)(new Date(), 1),
             },
         });
-        const templatePath = path_1.default.join(__dirname, "../templates/verifyEmail.hbs");
-        const source = fs_1.default.readFileSync(templatePath, "utf-8");
-        const emailTemplate = handlebars_1.default.compile(source);
-        const html = emailTemplate({
-            name: param.name,
-            verificationLink: `${config_1.FE_URL}/auth/verify-email?token=${token}`,
-            year: new Date().getFullYear(),
-        });
+        const html = `
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Email Verification</title>
+    <style>
+      body { background-color: #f1f0e8; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+      .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+      .header { background-color: #89a8b2; padding: 20px; text-align: center; color: white; }
+      .header h1 { margin: 0; font-size: 24px; }
+      .content { padding: 30px 20px; color: #333333; background-color: #f1f0e8; }
+      .content h2 { font-size: 20px; margin-bottom: 10px; }
+      .content p { font-size: 16px; line-height: 1.6; }
+      .btn-container { text-align: center; margin: 30px 0; }
+      .verify-btn { background-color: #89a8b2; color: #ffffff !important; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; display: inline-block; font-weight: bold; }
+      .footer { font-size: 12px; color: #999999; text-align: center; padding: 20px; background-color: #ffffff; }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="header">
+        <h1>Email Verification</h1>
+      </div>
+      <div class="content">
+        <h2>Hello ${param.name},</h2>
+        <p>Thank you for signing up with Precise. To complete your registration, please verify your email by clicking the button below.</p>
+        <div class="btn-container">
+          <a href="${config_1.FE_URL}/auth/verify-email?token=${token}" class="verify-btn">Verify My Email</a>
+        </div>
+        <p>This link will expire in 1 hour. If you did not request this, please ignore this email.</p>
+      </div>
+      <div class="footer">
+        &copy; ${new Date().getFullYear()} Precise. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>
+`;
         yield (0, nodemailer_1.sendEmail)({
             to: param.email,
             subject: "Verify your email (Admin Registration)",
