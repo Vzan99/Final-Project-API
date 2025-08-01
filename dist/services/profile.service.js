@@ -24,9 +24,7 @@ exports.UpdateCompanyProfileService = UpdateCompanyProfileService;
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = require("jsonwebtoken");
-const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
-const handlebars_1 = __importDefault(require("handlebars"));
 const config_1 = require("../config");
 const date_fns_1 = require("date-fns");
 const nodemailer_1 = require("../utils/nodemailer");
@@ -166,13 +164,53 @@ function ChangeEmailService(userId, newEmail, currentPassword) {
             update: { token, expiresAt: (0, date_fns_1.addHours)(new Date(), 1) },
             create: { userId, token, expiresAt: (0, date_fns_1.addHours)(new Date(), 1) },
         });
-        const source = fs_1.default.readFileSync(path_1.default.join(__dirname, "../templates/changeEmail.hbs"), "utf-8");
-        const tpl = handlebars_1.default.compile(source);
-        const html = tpl({
-            name: user.name || user.email.split("@")[0],
-            verificationLink: `${config_1.FE_URL}/auth/verify-new-email?token=${token}`,
-            year: new Date().getFullYear(),
-        });
+        const name = user.name || user.email.split("@")[0];
+        const verificationLink = `${config_1.FE_URL}/auth/verify-new-email?token=${token}`;
+        const year = new Date().getFullYear();
+        const html = `
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Email Change Verification</title>
+        <style>
+          body { background-color: #f1f0e8; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+          .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+          .header { background-color: #89a8b2; padding: 20px; text-align: center; color: white; }
+          .header h1 { margin: 0; font-size: 24px; }
+          .content { padding: 30px 20px; color: #333333; background-color: #f1f0e8; }
+          .content h2 { font-size: 20px; margin-bottom: 10px; }
+          .content p { font-size: 16px; line-height: 1.6; }
+          .btn-container { text-align: center; margin: 30px 0; }
+          .verify-btn { background-color: #89a8b2; color: #ffffff !important; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; display: inline-block; font-weight: bold; }
+          .footer { font-size: 12px; color: #999999; text-align: center; padding: 20px; background-color: #ffffff; }
+        </style>
+      </head>
+      <body>
+        <div class="email-container">
+          <div class="header">
+            <h1>Email Change Verification</h1>
+          </div>
+          <div class="content">
+            <h2>Hello ${name},</h2>
+            <p>
+              We received a request to change the email address for your account.
+              Please click the button below to verify your new email address:
+            </p>
+            <div class="btn-container">
+              <a href="${verificationLink}" class="verify-btn">Verify My Email</a>
+            </div>
+            <p>
+              This link will expire in 1 hour. If you did not request this change,
+              please ignore this email or contact support.
+            </p>
+          </div>
+          <div class="footer">
+            &copy; ${year} Precise. All rights reserved.
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
         yield (0, nodemailer_1.sendEmail)({
             to: normalized,
             subject: "Verify Your New Email Address",
