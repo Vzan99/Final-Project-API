@@ -41,6 +41,8 @@ export async function createJobHandler(
           ? req.body.tags
           : [req.body.tags]
         : [],
+      latitude: req.body.latitude ? Number(req.body.latitude) : undefined,
+      longitude: req.body.longitude ? Number(req.body.longitude) : undefined,
     };
 
     const parsed = createJobSchema.parse(raw);
@@ -152,6 +154,8 @@ export async function updateJobHandler(
       isRemote: raw.isRemote === "true" || raw.isRemote === true,
       hasTest: raw.hasTest === "true" || raw.hasTest === true,
       tags: Array.isArray(raw.tags) ? raw.tags : raw.tags ? [raw.tags] : [],
+      latitude: raw.latitude ? Number(raw.latitude) : undefined,
+      longitude: raw.longitude ? Number(raw.longitude) : undefined,
     };
 
     let bannerUrl: string | undefined;

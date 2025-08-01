@@ -257,7 +257,6 @@ export async function getJobsWithFilters(
   const skip = (page - 1) * pageSize;
   const andFilters: any[] = [];
 
-  // Basic filters...
   if (title)
     andFilters.push({ title: { contains: title, mode: "insensitive" } });
   if (location)
@@ -274,14 +273,13 @@ export async function getJobsWithFilters(
       experienceLevel: { contains: experienceLevel, mode: "insensitive" },
     });
 
-  // Listing time filter
   if (listingTime !== "any") {
     let gteDate: Date | undefined;
     let lteDate: Date | undefined;
 
     switch (listingTime) {
       case "today":
-        gteDate = startOfToday();
+        gteDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
         break;
       case "3days":
         gteDate = subDays(new Date(), 3);
@@ -323,7 +321,6 @@ export async function getJobsWithFilters(
     : "createdAt";
   const sortDir = ["asc", "desc"].includes(sortOrder) ? sortOrder : "desc";
 
-  // If lat/lng is provided, do post-query filtering
   if (lat !== undefined && lng !== undefined) {
     const allJobs = await prisma.job.findMany({
       where: {
@@ -341,7 +338,6 @@ export async function getJobsWithFilters(
       orderBy: { [sortField]: sortDir },
     });
 
-    // Distance calculation
     const toRadians = (deg: number) => (deg * Math.PI) / 180;
     const jobsInRadius = allJobs.filter((j) => {
       const dist =
@@ -363,7 +359,6 @@ export async function getJobsWithFilters(
     };
   }
 
-  // If no lat/lng filter, do normal paginated query
   const [total, jobs] = await Promise.all([
     prisma.job.count({ where: baseWhere }),
     prisma.job.findMany({
