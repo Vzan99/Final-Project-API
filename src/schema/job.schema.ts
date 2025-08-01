@@ -34,6 +34,8 @@ export const createJobSchema = z.object({
   tags: z.array(z.string()).optional(),
   bannerUrl: z.string().optional(),
   hasTest: z.boolean().optional().default(false),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 export type CreateJobInput = z.infer<typeof createJobSchema>;
@@ -75,16 +77,41 @@ export const jobFiltersSchema = z.object({
   employmentType: z
     .union([z.string(), z.array(z.string())])
     .optional()
-    .transform((val) =>
-      typeof val === "string" ? [val] : Array.isArray(val) ? val : []
-    ),
+    .transform((val) => {
+      if (typeof val === "string") {
+        if (val.includes(",")) {
+          return val
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean);
+        }
+        return [val];
+      }
+      if (Array.isArray(val)) {
+        return val;
+      }
+      return [];
+    }),
 
   jobCategory: z
     .union([z.string(), z.array(z.string())])
     .optional()
-    .transform((val) =>
-      typeof val === "string" ? [val] : Array.isArray(val) ? val : []
-    ),
+    .transform((val) => {
+      if (typeof val === "string") {
+        if (val.includes(",")) {
+          return val
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean);
+        }
+        return [val];
+      }
+      if (Array.isArray(val)) {
+        return val;
+      }
+      return [];
+    }),
+
   isRemote: z
     .string()
     .optional()
