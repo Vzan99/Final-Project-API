@@ -48,7 +48,7 @@ export async function createJobHandler(
     let bannerUrl = undefined;
     if (req.file) {
       const upload = await cloudinaryUpload(req.file, "image");
-      bannerUrl = upload.secure_url;
+      bannerUrl = `${upload.public_id}.${upload.format}`;
     }
 
     const job = await createJob(adminId, {
@@ -157,7 +157,7 @@ export async function updateJobHandler(
     let bannerUrl: string | undefined;
     if (req.file) {
       const uploaded = await cloudinaryUpload(req.file, "image");
-      bannerUrl = uploaded.secure_url;
+      bannerUrl = `${uploaded.public_id}.${uploaded.format}`;
     }
 
     const updated = await updateJobById(jobId, adminId, {
