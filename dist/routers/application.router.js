@@ -17,4 +17,5 @@ router.get("/jobs/:jobId/applicants", auth_middleware_1.VerifyToken, auth_middle
 router.get("/:id", auth_middleware_1.VerifyToken, auth_middleware_1.AdminGuard, application_controller_1.getApplicationDetailHandler);
 router.patch("/:id/status", auth_middleware_1.VerifyToken, auth_middleware_1.AdminGuard, (0, reqValidator_middleware_1.default)(application_schema_2.updateApplicationStatusSchema), application_controller_1.updateApplicationStatusHandler);
 router.get("/:jobId/status", auth_middleware_1.VerifyToken, auth_middleware_2.UserGuard, application_controller_1.checkApplicationStatusHandler);
+router.post("/:id/feedback", auth_middleware_1.VerifyToken, auth_middleware_1.AdminGuard, (0, reqValidator_middleware_1.default)(application_schema_1.feedbackSchema), application_controller_1.postFeedbackController);
 exports.default = router;

@@ -14,6 +14,7 @@ exports.getApplicationDetailHandler = getApplicationDetailHandler;
 exports.updateApplicationStatusHandler = updateApplicationStatusHandler;
 exports.checkApplicationStatusHandler = checkApplicationStatusHandler;
 exports.getUserApplicationsController = getUserApplicationsController;
+exports.postFeedbackController = postFeedbackController;
 const application_service_1 = require("../services/application.service");
 function getApplicantsByJobHandler(req, res, next) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -92,6 +93,24 @@ function getUserApplicationsController(req, res, next) {
         }
         catch (err) {
             next(err);
+        }
+    });
+}
+function postFeedbackController(req, res, next) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const applicationId = req.params.id;
+            const { feedback } = req.body;
+            if (typeof feedback !== "string" || feedback.trim() === "") {
+                throw new Error("Feedback must be a non-empty string");
+            }
+            const result = yield (0, application_service_1.submitApplicationFeedback)(applicationId, feedback);
+            res
+                .status(200)
+                .json({ message: "Feedback submitted", application: result });
+        }
+        catch (err) {
+            res.status(400).json({ message: err.message || "Something went wrong" });
         }
     });
 }

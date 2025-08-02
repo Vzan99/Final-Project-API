@@ -17,6 +17,7 @@ exports.getApplicationDetail = getApplicationDetail;
 exports.updateApplicationStatus = updateApplicationStatus;
 exports.checkIfUserApplied = checkIfUserApplied;
 exports.getUserApplicationService = getUserApplicationService;
+exports.submitApplicationFeedback = submitApplicationFeedback;
 const prisma_1 = __importDefault(require("../lib/prisma"));
 function getApplicantsByJob(jobId_1, adminId_1) {
     return __awaiter(this, arguments, void 0, function* (jobId, adminId, page = 1, limit = 10) {
@@ -246,5 +247,17 @@ function getUserApplicationService(userId_1) {
             totalPages: Math.ceil(total / pageSize),
             applications,
         };
+    });
+}
+function submitApplicationFeedback(applicationId, feedback) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (!feedback.trim()) {
+            throw new Error("Feedback must not be empty");
+        }
+        const updated = yield prisma_1.default.application.update({
+            where: { id: applicationId },
+            data: { feedback: feedback.trim() },
+        });
+        return updated;
     });
 }
