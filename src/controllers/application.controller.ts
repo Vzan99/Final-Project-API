@@ -5,6 +5,7 @@ import {
   updateApplicationStatus,
   checkIfUserApplied,
   getUserApplicationService,
+  submitApplicationFeedback,
 } from "../services/application.service";
 import { ApplicationQuery } from "../schema/application.schema";
 
@@ -109,5 +110,27 @@ export async function getUserApplicationsController(
     res.status(200).json(result);
   } catch (err) {
     next(err);
+  }
+}
+
+export async function postFeedbackController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const applicationId = req.params.id;
+    const { feedback } = req.body;
+
+    if (typeof feedback !== "string" || feedback.trim() === "") {
+      throw new Error("Feedback must be a non-empty string");
+    }
+
+    const result = await submitApplicationFeedback(applicationId, feedback);
+    res
+      .status(200)
+      .json({ message: "Feedback submitted", application: result });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message || "Something went wrong" });
   }
 }
