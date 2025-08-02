@@ -4,52 +4,82 @@ import PDFDocument from "pdfkit";
 
 export const getCVFormData = async (req: Request, res: Response) => {
   const userId = req.user?.id;
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: { profile: true },
+    include: {
+      profile: {
+        include: {
+          experiences: true,
+        },
+      },
+    },
   });
+
   if (!user || !user.profile) {
-    res.status(404).json({ message: "User profile not found" });
-    return;
+    return res.status(404).json({ message: "User profile not found" });
   }
+
+  const experienceText = user.profile.experiences
+    .map((exp) => {
+      const start = exp.startDate.toISOString().split("T")[0];
+      const end = exp.endDate
+        ? exp.endDate.toISOString().split("T")[0]
+        : "Present";
+      return `• ${exp.title} at ${exp.companyName} (${start} - ${end})\n${
+        exp.description || ""
+      }`;
+    })
+    .join("\n\n");
+
   res.json({
     name: user.name,
     email: user.email,
-    ...user.profile,
+    phone: user.phone || "",
+    about: user.profile.about || "",
+    experience: experienceText,
+    education: user.profile.education || "",
+    skills: (user.profile.skills || []).join(", "),
   });
 };
 
 export const generateCV = async (req: Request, res: Response) => {
   const userId = req.user?.id;
-  const { summary, extraSkills = [], projects = [] } = req.body;
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: { profile: true },
-  });
-
-  if (!user || !user.profile) {
-    res.status(404).json({ message: "User profile not found" });
-    return;
-  }
+  const {
+    name,
+    email,
+    phone,
+    about,
+    experience,
+    education,
+    extraSkills = [],
+    projects = [],
+  } = req.body;
 
   const doc = new PDFDocument();
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", "attachment; filename=cv.pdf");
 
-  doc.pipe(res); // Pipe dulu sebelum isi konten
+  doc.pipe(res);
 
-  doc.fontSize(20).text(user.name);
-  doc.fontSize(12).text(user.email);
+  doc.fontSize(20).text(name || "-");
+  doc.fontSize(12).text(`${email || "-"} | ${phone || "-"}`);
   doc.moveDown();
 
-  doc.fontSize(14).text("Summary:");
-  doc.fontSize(12).text(summary || "-");
+  doc.fontSize(14).text("About:");
+  doc.fontSize(12).text(about || "-");
+  doc.moveDown();
+
+  doc.fontSize(14).text("Experience:");
+  doc.fontSize(12).text(experience || "-");
+  doc.moveDown();
+
+  doc.fontSize(14).text("Education:");
+  doc.fontSize(12).text(education || "-");
   doc.moveDown();
 
   doc.fontSize(14).text("Skills:");
-  const allSkills = [...(user.profile.skills || []), ...extraSkills];
-  doc.fontSize(12).text(allSkills.length ? allSkills.join(", ") : "-");
+  doc.fontSize(12).text(extraSkills.length ? extraSkills.join(", ") : "-");
   doc.moveDown();
 
   doc.fontSize(14).text("Projects:");
@@ -61,5 +91,5 @@ export const generateCV = async (req: Request, res: Response) => {
     doc.fontSize(12).text("-");
   }
 
-  doc.end(); //
+  doc.end();
 };

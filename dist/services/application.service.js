@@ -215,12 +215,23 @@ function getUserApplicationService(userId_1) {
                 skip,
                 take: pageSize,
                 orderBy: { createdAt: "desc" },
-                include: {
+                select: {
+                    id: true,
+                    status: true,
+                    createdAt: true,
+                    feedback: true,
                     job: {
-                        include: {
+                        select: {
+                            id: true,
+                            title: true,
+                            location: true,
                             company: {
-                                include: {
-                                    admin: true,
+                                select: {
+                                    admin: {
+                                        select: {
+                                            name: true,
+                                        },
+                                    },
                                 },
                             },
                         },

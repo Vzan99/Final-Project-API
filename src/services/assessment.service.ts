@@ -16,7 +16,7 @@ type AssessmentInput = {
   timeLimit?: number;
 };
 
-// Developer creates assessment
+// Developer creates new assessment
 export const createAssessment = async (
   input: AssessmentInput,
   developerId: string
@@ -33,7 +33,7 @@ export const createAssessment = async (
   });
 };
 
-// User fetches all public assessments
+// User fetches all available assessments
 export const getAllAssessments = async () => {
   return prisma.skillAssessment.findMany({
     where: { isActive: true },
@@ -52,6 +52,10 @@ export const submitAssessment = async (
   userId: string,
   userAnswers: string[]
 ) => {
+  if (!Array.isArray(userAnswers)) {
+    throw new Error("Answers must be an array of strings.");
+  }
+
   const assessment = await prisma.skillAssessment.findUnique({
     where: { id: assessmentId },
   });
@@ -60,12 +64,18 @@ export const submitAssessment = async (
 
   const questions = assessment.questions as Question[];
 
-  if (!Array.isArray(questions) || userAnswers.length !== questions.length) {
+  if (
+    !Array.isArray(questions) ||
+    !Array.isArray(userAnswers) ||
+    userAnswers.length !== questions.length
+  ) {
     throw new Error("Invalid number of answers");
   }
 
   let correct = 0;
+
   questions.forEach((q, idx) => {
+    const userAnswer = userAnswers[idx];
     if (
       Array.isArray(q.options) &&
       typeof q.answer === "number" &&
@@ -73,7 +83,7 @@ export const submitAssessment = async (
       q.answer < q.options.length
     ) {
       const correctOption = q.options[q.answer];
-      if (userAnswers[idx] === correctOption) correct++;
+      if (userAnswer === correctOption) correct++;
     }
   });
 
@@ -91,6 +101,7 @@ export const submitAssessment = async (
     },
   });
 
+  // Create certificate if passed
   if (passed) {
     try {
       const verificationCode = uuidv4();
@@ -109,13 +120,15 @@ export const submitAssessment = async (
           qrCodeUrl: qrCodeDataUrl,
         },
       });
-    } catch (_) {}
+    } catch (err) {
+      console.error("Failed to generate certificate:", err);
+    }
   }
 
   return result;
 };
 
-// Get result for a specific user-assessment
+// Get result of user for a specific assessment
 export const getAssessmentResult = async (
   assessmentId: string,
   userId: string
