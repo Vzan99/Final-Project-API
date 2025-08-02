@@ -16,7 +16,7 @@ exports.getAssessmentResult = exports.submitAssessment = exports.getAllAssessmen
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const uuid_1 = require("uuid");
 const qrcode_1 = __importDefault(require("qrcode"));
-// Developer creates assessment
+// Developer creates new assessment
 const createAssessment = (input, developerId) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     return prisma_1.default.skillAssessment.create({
@@ -31,7 +31,7 @@ const createAssessment = (input, developerId) => __awaiter(void 0, void 0, void 
     });
 });
 exports.createAssessment = createAssessment;
-// User fetches all public assessments
+// User fetches all available assessments
 const getAllAssessments = () => __awaiter(void 0, void 0, void 0, function* () {
     return prisma_1.default.skillAssessment.findMany({
         where: { isActive: true },
@@ -47,23 +47,29 @@ exports.getAllAssessments = getAllAssessments;
 // User submits answers to an assessment
 const submitAssessment = (assessmentId, userId, userAnswers) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
+    if (!Array.isArray(userAnswers)) {
+        throw new Error("Answers must be an array of strings.");
+    }
     const assessment = yield prisma_1.default.skillAssessment.findUnique({
         where: { id: assessmentId },
     });
     if (!assessment)
         throw new Error("Assessment not found");
     const questions = assessment.questions;
-    if (!Array.isArray(questions) || userAnswers.length !== questions.length) {
+    if (!Array.isArray(questions) ||
+        !Array.isArray(userAnswers) ||
+        userAnswers.length !== questions.length) {
         throw new Error("Invalid number of answers");
     }
     let correct = 0;
     questions.forEach((q, idx) => {
+        const userAnswer = userAnswers[idx];
         if (Array.isArray(q.options) &&
             typeof q.answer === "number" &&
             q.answer >= 0 &&
             q.answer < q.options.length) {
             const correctOption = q.options[q.answer];
-            if (userAnswers[idx] === correctOption)
+            if (userAnswer === correctOption)
                 correct++;
         }
     });
@@ -79,6 +85,7 @@ const submitAssessment = (assessmentId, userId, userAnswers) => __awaiter(void 0
             badge: passed ? assessment.name : "",
         },
     });
+    // Create certificate if passed
     if (passed) {
         try {
             const verificationCode = (0, uuid_1.v4)();
@@ -96,12 +103,14 @@ const submitAssessment = (assessmentId, userId, userAnswers) => __awaiter(void 0
                 },
             });
         }
-        catch (_) { }
+        catch (err) {
+            console.error("Failed to generate certificate:", err);
+        }
     }
     return result;
 });
 exports.submitAssessment = submitAssessment;
-// Get result for a specific user-assessment
+// Get result of user for a specific assessment
 const getAssessmentResult = (assessmentId, userId) => __awaiter(void 0, void 0, void 0, function* () {
     return prisma_1.default.userAssessment.findFirst({
         where: { assessmentId, userId },

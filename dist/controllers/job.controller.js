@@ -43,7 +43,7 @@ function createJobHandler(req, res, next) {
             let bannerUrl = undefined;
             if (req.file) {
                 const upload = yield (0, cloudinary_1.cloudinaryUpload)(req.file, "image");
-                bannerUrl = upload.secure_url;
+                bannerUrl = `${upload.public_id}.${upload.format}`;
             }
             const job = yield (0, job_service_1.createJob)(adminId, Object.assign(Object.assign({}, parsed), { bannerUrl }));
             res.status(201).json({
@@ -107,7 +107,7 @@ function updateJobHandler(req, res, next) {
             let bannerUrl;
             if (req.file) {
                 const uploaded = yield (0, cloudinary_1.cloudinaryUpload)(req.file, "image");
-                bannerUrl = uploaded.secure_url;
+                bannerUrl = `${uploaded.public_id}.${uploaded.format}`;
             }
             const updated = yield (0, job_service_1.updateJobById)(jobId, adminId, Object.assign(Object.assign({}, parsed), (bannerUrl && { bannerUrl })));
             res.status(200).json({
