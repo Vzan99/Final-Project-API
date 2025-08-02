@@ -2,13 +2,17 @@ import { Router } from "express";
 import ReqValidator from "../middlewares/reqValidator.middleware";
 import QueryValidator from "../middlewares/queryValidator.middleware";
 import { VerifyToken, AdminGuard } from "../middlewares/auth.middleware";
-import { ApplicationQuerySchema } from "../schema/application.schema";
+import {
+  ApplicationQuerySchema,
+  feedbackSchema,
+} from "../schema/application.schema";
 import {
   getApplicantsByJobHandler,
   getApplicationDetailHandler,
   updateApplicationStatusHandler,
   checkApplicationStatusHandler,
   getUserApplicationsController,
+  postFeedbackController,
 } from "../controllers/application.controller";
 import {
   updateApplicationStatusSchema,
@@ -46,6 +50,14 @@ router.get(
   VerifyToken,
   UserGuard,
   checkApplicationStatusHandler
+);
+
+router.post(
+  "/:id/feedback",
+  VerifyToken,
+  AdminGuard,
+  ReqValidator(feedbackSchema),
+  postFeedbackController
 );
 
 export default router;

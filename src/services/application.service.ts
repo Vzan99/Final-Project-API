@@ -267,3 +267,19 @@ export async function getUserApplicationService(
     applications,
   };
 }
+
+export async function submitApplicationFeedback(
+  applicationId: string,
+  feedback: string
+) {
+  if (!feedback.trim()) {
+    throw new Error("Feedback must not be empty");
+  }
+
+  const updated = await prisma.application.update({
+    where: { id: applicationId },
+    data: { feedback: feedback.trim() },
+  });
+
+  return updated;
+}

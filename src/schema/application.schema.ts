@@ -24,3 +24,7 @@ export const ApplicationQuerySchema = z.object({
 });
 
 export type ApplicationQuery = z.infer<typeof ApplicationQuerySchema>;
+
+export const feedbackSchema = z.object({
+  feedback: z.string().min(1, "Feedback must not be empty"),
+});
