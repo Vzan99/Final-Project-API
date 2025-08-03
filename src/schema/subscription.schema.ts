@@ -8,9 +8,7 @@ export const createSubscriptionSchema = z.object({
 });
 
 export const midtransTokenSchema = z.object({
-  body: z.object({
-    type: z.enum(["STANDARD", "PROFESSIONAL"]),
-  }),
+  type: z.enum(["STANDARD", "PROFESSIONAL"]),
 });
 
 export const subscriptionIdParamSchema = z.object({

@@ -91,7 +91,7 @@ async function GetProfileService(userId: string) {
       isVerified: user.isVerified,
       certificates: user.certificates,
       subscription,
-      ssessments: user.assessments,
+      assessments: user.assessments,
     };
 
     if (user.role === "USER") {

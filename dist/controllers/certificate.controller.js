@@ -16,6 +16,7 @@ exports.downloadCertificatePdf = exports.verifyCertificateHandler = void 0;
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const asyncHandler_1 = require("../utils/asyncHandler");
 const generateCertificatePDF_1 = require("../utils/generateCertificatePDF");
+const path_1 = __importDefault(require("path"));
 exports.verifyCertificateHandler = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { code } = req.params;
     const cert = yield prisma_1.default.certificate.findFirst({
@@ -51,5 +52,7 @@ exports.downloadCertificatePdf = (0, asyncHandler_1.asyncHandler)((req, res) => 
     if (!cert) {
         return res.status(404).json({ message: "Certificate not found" });
     }
-    (0, generateCertificatePDF_1.generateCertificatePdf)({ certificate: cert, res });
+    yield (0, generateCertificatePDF_1.generateAndSaveCertificatePdf)({ certificate: cert });
+    const filePath = path_1.default.join(__dirname, `../../public/certificates/${cert.id}.pdf`);
+    return res.download(filePath);
 }));

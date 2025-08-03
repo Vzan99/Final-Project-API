@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import prisma from "../lib/prisma";
 import { asyncHandler } from "../utils/asyncHandler";
-import { generateCertificatePdf } from "../utils/generateCertificatePDF";
+import { generateAndSaveCertificatePdf } from "../utils/generateCertificatePDF";
+import path from "path";
 
 export const verifyCertificateHandler = asyncHandler(
   async (req: Request, res: Response) => {
@@ -48,6 +49,12 @@ export const downloadCertificatePdf = asyncHandler(
       return res.status(404).json({ message: "Certificate not found" });
     }
 
-    generateCertificatePdf({ certificate: cert, res });
+    await generateAndSaveCertificatePdf({ certificate: cert });
+
+    const filePath = path.join(
+      __dirname,
+      `../../public/certificates/${cert.id}.pdf`
+    );
+    return res.download(filePath);
   }
 );
