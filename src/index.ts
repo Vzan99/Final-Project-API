@@ -2,11 +2,7 @@ import express, { Application } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
-dotenv.config();
-
 import { FE_URL, PORT } from "./config";
-
-// ─── Routers ─────────────────────────────────────────────
 import AuthRouter from "./routers/auth.router";
 import ProfileRouter from "./routers/profile.router";
 import PreTestRouter from "./routers/preTest.router";
@@ -20,11 +16,11 @@ import assessmentRouter from "./routers/assessment.router";
 import certificateRouter from "./routers/certificate.router";
 import ReviewRouter from "./routers/review.router";
 import CompaniesRouter from "./routers/company.router";
-
-// ─── Cron Jobs ────────────────────────────────────────────
 import { initSubscriptionCron } from "./lib/subscriptionCron";
 import { initInterviewReminderCron } from "./lib/interviewCron";
 import { scheduleAutoCloseJobs } from "./lib/autoCloseJobsCron";
+
+dotenv.config();
 
 // ─── Express App Setup ───────────────────────────────────
 const app: Application = express();
@@ -39,6 +35,7 @@ app.use(
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(express.static("public"));
 
 // ─── Auth ────────────────────────────────────────────────
 app.use("/auth", AuthRouter);

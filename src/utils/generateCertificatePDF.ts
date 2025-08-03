@@ -1,67 +1,72 @@
 import PDFDocument from "pdfkit";
-import { Response } from "express";
-import { Certificate, User, SkillAssessment } from "@prisma/client";
 import fs from "fs";
 import path from "path";
+import { Certificate, User, SkillAssessment } from "@prisma/client";
 
-interface CertificateData {
+export const generateAndSaveCertificatePdf = async ({
+  certificate,
+}: {
   certificate: Certificate & {
     user: Pick<User, "name">;
     assessment: Pick<SkillAssessment, "name">;
   };
-  res: Response;
-}
+}) => {
+  const dir = path.join(__dirname, "../../public/certificates");
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
 
-export const generateCertificatePdf = ({
-  certificate,
-  res,
-}: CertificateData) => {
-  const doc = new PDFDocument({ size: "A4", margin: 50 });
+  const filePath = path.join(dir, `${certificate.id}.pdf`);
+  const stream = fs.createWriteStream(filePath);
 
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader(
-    "Content-Disposition",
-    `inline; filename=certificate-${certificate.id}.pdf`
-  );
+  return new Promise<void>((resolve, reject) => {
+    const doc = new PDFDocument({ size: "A4", margin: 50 });
+    doc.pipe(stream);
 
-  doc.pipe(res);
+    doc
+      .rect(25, 25, doc.page.width - 50, doc.page.height - 50)
+      .stroke("#aaaaaa");
 
-  // Background or border
-  doc.rect(25, 25, doc.page.width - 50, doc.page.height - 50).stroke("#aaaaaa");
+    doc
+      .fontSize(24)
+      .fillColor("#333")
+      .text("Certificate of Completion", { align: "center" })
+      .moveDown();
 
-  // Header
-  doc
-    .fontSize(24)
-    .fillColor("#333")
-    .text("Certificate of Completion", { align: "center" });
+    doc
+      .fontSize(20)
+      .fillColor("#000")
+      .text(certificate.user.name, { align: "center" })
+      .moveDown();
 
-  doc.moveDown();
+    doc
+      .fontSize(14)
+      .fillColor("#444")
+      .text(
+        `has successfully completed the skill assessment: "${certificate.assessment.name}"`,
+        { align: "center" }
+      )
+      .moveDown();
 
-  // Name
-  doc
-    .fontSize(20)
-    .fillColor("#000")
-    .text(certificate.user.name, { align: "center" });
+    doc
+      .fontSize(12)
+      .fillColor("#666")
+      .text(
+        `Issued on: ${new Date(certificate.issuedAt).toLocaleDateString()}`,
+        { align: "center" }
+      );
 
-  doc.moveDown();
+    if (certificate.qrCodeUrl) {
+      doc.image(certificate.qrCodeUrl, doc.page.width / 2 - 50, doc.y + 20, {
+        width: 100,
+        height: 100,
+        align: "center",
+      });
+    }
 
-  // Assessment
-  doc
-    .fontSize(14)
-    .fillColor("#444")
-    .text(
-      `has successfully completed the skill assessment: "${certificate.assessment.name}"`,
-      { align: "center" }
-    );
+    doc.end();
 
-  doc.moveDown();
-
-  doc
-    .fontSize(12)
-    .fillColor("#666")
-    .text(`Issued on: ${new Date(certificate.issuedAt).toLocaleDateString()}`, {
-      align: "center",
-    });
-
-  doc.end();
+    stream.on("finish", () => resolve());
+    stream.on("error", reject);
+  });
 };

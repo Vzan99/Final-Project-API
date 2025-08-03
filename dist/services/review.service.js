@@ -16,7 +16,7 @@ exports.verifyReview = exports.getCompanyReviews = exports.createReview = void 0
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const createReview = (userId, input) => __awaiter(void 0, void 0, void 0, function* () {
     return prisma_1.default.companyReview.create({
-        data: Object.assign(Object.assign({}, input), { userId }),
+        data: Object.assign(Object.assign({}, input), { isVerified: true, userId }),
     });
 });
 exports.createReview = createReview;

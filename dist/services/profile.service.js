@@ -105,7 +105,7 @@ function GetProfileService(userId) {
                 isVerified: user.isVerified,
                 certificates: user.certificates,
                 subscription,
-                ssessments: user.assessments,
+                assessments: user.assessments,
             };
             if (user.role === "USER") {
                 baseResponse.profile = user.profile;

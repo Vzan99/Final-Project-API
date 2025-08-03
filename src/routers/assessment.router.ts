@@ -3,11 +3,12 @@ import {
   createAssessmentHandler,
   getAssessmentsHandler,
   submitAssessmentHandler,
-  getAssessmentResultHandler,
   getAssessmentDetailHandler,
   getDeveloperAssessmentsHandler,
   updateAssessmentHandler,
   deleteAssessmentHandler,
+  getUserAssessmentResultsHandler,
+  getAssessmentResultByIdHandler,
 } from "../controllers/assessment.controller";
 
 import {
@@ -18,7 +19,6 @@ import {
 
 import ReqValidator from "../middlewares/reqValidator.middleware";
 import ParamsValidator from "../middlewares/paramsValidator.middleware";
-
 import {
   createAssessmentSchema,
   submitAssessmentSchema,
@@ -27,9 +27,28 @@ import {
 
 const router = express.Router();
 
-// ───── USER with Subscription
+// ─── USER ─────────────────────────────
 router.get("/", VerifyToken, SubscriberGuard, getAssessmentsHandler);
-
+router.get(
+  "/me/assessments",
+  VerifyToken,
+  SubscriberGuard,
+  getUserAssessmentResultsHandler
+);
+router.get(
+  "/:id/detail",
+  VerifyToken,
+  SubscriberGuard,
+  ParamsValidator(assessmentParamSchema),
+  getAssessmentDetailHandler
+);
+router.get(
+  "/:id/result",
+  VerifyToken,
+  SubscriberGuard,
+  ParamsValidator(assessmentParamSchema),
+  getAssessmentResultByIdHandler
+);
 router.post(
   "/:id/submit",
   VerifyToken,
@@ -39,23 +58,13 @@ router.post(
   submitAssessmentHandler
 );
 
+// ─── DEVELOPER ─────────────────────────────
 router.get(
-  "/:id/result",
+  "/developer/all",
   VerifyToken,
-  SubscriberGuard,
-  ParamsValidator(assessmentParamSchema),
-  getAssessmentResultHandler
+  DeveloperGuard,
+  getDeveloperAssessmentsHandler
 );
-
-router.get(
-  "/:id/detail",
-  VerifyToken,
-  SubscriberGuard,
-  ParamsValidator(assessmentParamSchema),
-  getAssessmentDetailHandler
-);
-
-// ───── DEVELOPER only
 router.post(
   "/",
   VerifyToken,
@@ -63,14 +72,6 @@ router.post(
   ReqValidator(createAssessmentSchema),
   createAssessmentHandler
 );
-
-router.get(
-  "/developer/all",
-  VerifyToken,
-  DeveloperGuard,
-  getDeveloperAssessmentsHandler
-);
-
 router.put(
   "/:id",
   VerifyToken,
@@ -79,7 +80,6 @@ router.put(
   ReqValidator(createAssessmentSchema),
   updateAssessmentHandler
 );
-
 router.delete(
   "/:id",
   VerifyToken,

@@ -101,12 +101,19 @@ exports.getSubscriptionOptions = (0, asyncHandler_1.asyncHandler)((req, res) => 
 }));
 exports.subscribe = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
-    const { type, paymentMethod } = req.body;
     const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    const { type, paymentMethod } = req.body;
     if (!userId)
         return res.status(401).json({ message: "Unauthorized" });
-    if (!req.file)
+    if (!type || !["STANDARD", "PROFESSIONAL"].includes(type)) {
+        return res.status(400).json({ message: "Invalid subscription type" });
+    }
+    if (!paymentMethod) {
+        return res.status(400).json({ message: "Payment method is required" });
+    }
+    if (!req.file) {
         return res.status(400).json({ message: "Payment proof is required" });
+    }
     const uploadResult = yield (0, cloudinary_1.cloudinaryUpload)(req.file);
     const paymentProofUrl = uploadResult.secure_url;
     const amount = type === "STANDARD" ? 25000 : 100000;
@@ -163,40 +170,47 @@ exports.getSubscriptionHistory = (0, asyncHandler_1.asyncHandler)((req, res) => 
 }));
 exports.createMidtransTransaction = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c;
-    const { type } = req.body;
-    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
-    if (!userId)
-        return res.status(401).json({ message: "Unauthorized" });
-    const price = type === "PROFESSIONAL" ? 100000 : 25000;
-    yield prisma_1.default.subscription.create({
-        data: {
-            userId,
-            type,
-            amount: price,
-            startDate: new Date(),
-            endDate: (0, dayjs_1.default)().add(30, "day").toDate(),
-            paymentStatus: "PENDING",
-            isApproved: false,
-        },
-    });
-    const orderId = `ORD-${userId.slice(0, 6)}-${Date.now()
-        .toString()
-        .slice(-6)}`;
-    const parameter = {
-        transaction_details: {
-            order_id: orderId,
-            gross_amount: price,
-        },
-        credit_card: {
-            secure: true,
-        },
-        customer_details: {
-            first_name: ((_b = req.user) === null || _b === void 0 ? void 0 : _b.name) || "User",
-            email: ((_c = req.user) === null || _c === void 0 ? void 0 : _c.email) || "example@mail.com",
-        },
-    };
-    const transaction = yield midtrans_1.default.createTransaction(parameter);
-    res.json({ token: transaction.token });
+    try {
+        const { type } = req.body;
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+        if (!userId)
+            return res.status(401).json({ message: "Unauthorized" });
+        if (!type || !["STANDARD", "PROFESSIONAL"].includes(type)) {
+            return res.status(400).json({ message: "Invalid subscription type" });
+        }
+        const price = type === "PROFESSIONAL" ? 100000 : 25000;
+        const subscription = yield prisma_1.default.subscription.create({
+            data: {
+                userId,
+                type,
+                amount: price,
+                startDate: new Date(),
+                endDate: (0, dayjs_1.default)().add(30, "day").toDate(),
+                paymentStatus: "PENDING",
+                isApproved: false,
+            },
+        });
+        const orderId = `ORD-${userId.slice(0, 6)}-${subscription.id.slice(0, 6)}`;
+        const parameter = {
+            transaction_details: {
+                order_id: orderId,
+                gross_amount: price,
+            },
+            credit_card: {
+                secure: true,
+            },
+            customer_details: {
+                first_name: ((_b = req.user) === null || _b === void 0 ? void 0 : _b.name) || "User",
+                email: ((_c = req.user) === null || _c === void 0 ? void 0 : _c.email) || "example@mail.com",
+            },
+        };
+        const transaction = yield midtrans_1.default.createTransaction(parameter);
+        res.json({ token: transaction.token });
+    }
+    catch (err) {
+        console.error("Midtrans error", err);
+        res.status(500).json({ message: "Failed to create Midtrans transaction" });
+    }
 }));
 exports.midtransWebhookHandler = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { order_id, transaction_status, fraud_status, signature_key, gross_amount, status_code, } = req.body;

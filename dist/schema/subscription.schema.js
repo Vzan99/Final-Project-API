@@ -9,9 +9,7 @@ exports.createSubscriptionSchema = zod_1.z.object({
     }),
 });
 exports.midtransTokenSchema = zod_1.z.object({
-    body: zod_1.z.object({
-        type: zod_1.z.enum(["STANDARD", "PROFESSIONAL"]),
-    }),
+    type: zod_1.z.enum(["STANDARD", "PROFESSIONAL"]),
 });
 exports.subscriptionIdParamSchema = zod_1.z.object({
     params: zod_1.z.object({

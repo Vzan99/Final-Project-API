@@ -4,6 +4,7 @@ export const createReview = async (userId: string, input: any) => {
   return prisma.companyReview.create({
     data: {
       ...input,
+      isVerified: true,
       userId,
     },
   });

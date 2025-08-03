@@ -7,9 +7,7 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
 const config_1 = require("./config");
-// ─── Routers ─────────────────────────────────────────────
 const auth_router_1 = __importDefault(require("./routers/auth.router"));
 const profile_router_1 = __importDefault(require("./routers/profile.router"));
 const preTest_router_1 = __importDefault(require("./routers/preTest.router"));
@@ -23,10 +21,10 @@ const assessment_router_1 = __importDefault(require("./routers/assessment.router
 const certificate_router_1 = __importDefault(require("./routers/certificate.router"));
 const review_router_1 = __importDefault(require("./routers/review.router"));
 const company_router_1 = __importDefault(require("./routers/company.router"));
-// ─── Cron Jobs ────────────────────────────────────────────
 const subscriptionCron_1 = require("./lib/subscriptionCron");
 const interviewCron_1 = require("./lib/interviewCron");
 const autoCloseJobsCron_1 = require("./lib/autoCloseJobsCron");
+dotenv_1.default.config();
 // ─── Express App Setup ───────────────────────────────────
 const app = (0, express_1.default)();
 const port = config_1.PORT || 8000;
@@ -36,6 +34,7 @@ app.use((0, cors_1.default)({
 }));
 app.use(express_1.default.json());
 app.use((0, cookie_parser_1.default)());
+app.use(express_1.default.static("public"));
 // ─── Auth ────────────────────────────────────────────────
 app.use("/auth", auth_router_1.default);
 // ─── User Profile & CV ───────────────────────────────────

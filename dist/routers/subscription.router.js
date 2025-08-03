@@ -22,7 +22,7 @@ router.get("/developer/analytics", (0, asyncHandler_1.asyncHandler)(subscription
 router.get("/options", auth_middleware_1.VerifyToken, auth_middleware_1.UserGuard, (0, asyncHandler_1.asyncHandler)(subscription_controller_1.getSubscriptionOptions));
 router.get("/user/me", auth_middleware_1.VerifyToken, auth_middleware_1.UserGuard, (0, asyncHandler_1.asyncHandler)(subscription_controller_1.getMySubscription));
 router.get("/user/history", auth_middleware_1.VerifyToken, auth_middleware_1.UserGuard, (0, asyncHandler_1.asyncHandler)(subscription_controller_1.getSubscriptionHistory));
-router.post("/user/subscribe", auth_middleware_1.VerifyToken, auth_middleware_1.UserGuard, upload.single("paymentProof"), (0, reqValidator_middleware_1.default)(subscription_schema_1.createSubscriptionSchema), (0, asyncHandler_1.asyncHandler)(subscription_controller_1.subscribe));
+router.post("/user/subscribe", auth_middleware_1.VerifyToken, auth_middleware_1.UserGuard, upload.single("paymentProof"), (0, asyncHandler_1.asyncHandler)(subscription_controller_1.subscribe));
 router.post("/user/midtrans/token", auth_middleware_1.VerifyToken, auth_middleware_1.UserGuard, (0, reqValidator_middleware_1.default)(subscription_schema_1.midtransTokenSchema), (0, asyncHandler_1.asyncHandler)(subscription_controller_1.createMidtransTransaction));
 // Midtrans webhook (no token)
 router.post("/webhook/midtrans", (0, reqValidator_middleware_1.default)(subscription_schema_1.midtransWebhookSchema), (0, asyncHandler_1.asyncHandler)(subscription_controller_1.midtransWebhookHandler));

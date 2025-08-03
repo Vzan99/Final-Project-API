@@ -20,7 +20,6 @@ import { asyncHandler } from "../utils/asyncHandler";
 import ReqValidator from "../middlewares/reqValidator.middleware";
 import ParamsValidator from "../middlewares/paramsValidator.middleware";
 import {
-  createSubscriptionSchema,
   midtransTokenSchema,
   subscriptionIdParamSchema,
   midtransWebhookSchema,
@@ -58,7 +57,6 @@ router.post(
   VerifyToken,
   UserGuard,
   upload.single("paymentProof"),
-  ReqValidator(createSubscriptionSchema),
   asyncHandler(subscribe)
 );
 router.post(
