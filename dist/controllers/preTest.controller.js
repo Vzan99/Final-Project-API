@@ -74,7 +74,6 @@ function submitPreSelectionAnswerHandler(req, res, next) {
         try {
             const jobId = req.params.jobId;
             const userId = req.user.id;
-            // req.body sudah tervalidasi oleh middleware
             const result = yield (0, preTest_service_1.submitPreSelectionAnswer)(jobId, userId, req.body);
             res.status(201).json({
                 success: true,

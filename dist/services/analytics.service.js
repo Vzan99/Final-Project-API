@@ -51,7 +51,7 @@ function getUserDemographics() {
             // Gender count
             const g = profile.gender || "Unknown";
             demographics.gender[g] = (demographics.gender[g] || 0) + 1;
-            // Location count (gunakan address sebagai lokasi kasar)
+            // Location count
             const loc = profile.address || "Unknown";
             demographics.location[loc] = (demographics.location[loc] || 0) + 1;
         }
@@ -63,7 +63,7 @@ function getSalaryTrends() {
         const applications = yield prisma_1.default.application.findMany({
             where: {
                 status: {
-                    in: ["REVIEWED", "INTERVIEW", "ACCEPTED"], // opsional filter, tergantung kebutuhan
+                    in: ["REVIEWED", "INTERVIEW", "ACCEPTED"],
                 },
             },
             select: {
@@ -121,7 +121,6 @@ function getApplicantInterests() {
             category,
             totalApplications: count,
         }));
-        // Optional: sort by most popular
         result.sort((a, b) => b.totalApplications - a.totalApplications);
         return result;
     });
@@ -145,7 +144,7 @@ function getAnalyticsOverview() {
                 score: true,
             },
         });
-        // (Opsional) Rata-rata skor skill assessment
+        // Rata-rata skor skill assessment
         const skillAssessmentAvg = yield prisma_1.default.userAssessment.aggregate({
             _avg: {
                 score: true,

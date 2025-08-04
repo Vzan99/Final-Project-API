@@ -83,7 +83,6 @@ export async function submitPreSelectionAnswerHandler(
     const jobId = req.params.jobId;
     const userId = req.user!.id;
 
-    // req.body sudah tervalidasi oleh middleware
     const result = await submitPreSelectionAnswer(jobId, userId, req.body);
 
     res.status(201).json({

@@ -86,10 +86,19 @@ export async function getPreSelectionTestDetailByAdmin(
     },
   });
 
-  if (!job || job.companyId !== company.id || !job.preSelectionTest)
+  if (!job || job.companyId !== company.id)
     throw new Error("Test not found or access denied");
 
   const test = job.preSelectionTest;
+
+  if (!test) {
+    return {
+      jobId: job.id,
+      testId: null,
+      questions: [],
+    };
+  }
+
   const questions = test.questions as any[];
 
   return {
