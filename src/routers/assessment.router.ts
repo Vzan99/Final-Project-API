@@ -9,6 +9,8 @@ import {
   deleteAssessmentHandler,
   getUserAssessmentResultsHandler,
   getAssessmentResultByIdHandler,
+  previewCertificatePDFHandler,
+  verifyCertificateHandler,
 } from "../controllers/assessment.controller";
 
 import {
@@ -20,9 +22,10 @@ import {
 import ReqValidator from "../middlewares/reqValidator.middleware";
 import ParamsValidator from "../middlewares/paramsValidator.middleware";
 import {
+  assessmentParamSchema,
   createAssessmentSchema,
   submitAssessmentSchema,
-  assessmentParamSchema,
+  updateAssessmentSchema,
 } from "../schema/assessment.schema";
 
 const router = express.Router();
@@ -57,6 +60,15 @@ router.post(
   ReqValidator(submitAssessmentSchema),
   submitAssessmentHandler
 );
+router.get(
+  "/certificates/:id/preview",
+  VerifyToken,
+  SubscriberGuard,
+  ParamsValidator(assessmentParamSchema),
+  previewCertificatePDFHandler
+);
+
+router.get("/verify/:code", verifyCertificateHandler);
 
 // ─── DEVELOPER ─────────────────────────────
 router.get(
