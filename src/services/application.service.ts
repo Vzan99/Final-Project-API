@@ -72,7 +72,7 @@ export async function getApplicantsByJob(
       const latestInterview = user.interviewSchedules?.[0];
 
       return {
-        // A. Data Aplikasi
+        // Data Aplikasi
         id: app.id,
         status: app.status,
         expectedSalary: app.expectedSalary,
@@ -80,7 +80,7 @@ export async function getApplicantsByJob(
         coverLetter: app.coverLetter,
         appliedAt: app.createdAt,
 
-        // B. Data User
+        // Data User
         user: {
           id: user.id,
           name: user.name,
@@ -88,13 +88,13 @@ export async function getApplicantsByJob(
           profile: user.profile,
         },
 
-        // C. Data Pekerjaan
+        // Data Pekerjaan
         job: {
           id: app.job.id,
           title: app.job.title,
         },
 
-        // D. Data Pre-selection Test
+        // Data Pre-selection Test
         test: test
           ? {
               score: test.score,
@@ -103,10 +103,10 @@ export async function getApplicantsByJob(
             }
           : null,
 
-        // E. Subscription
+        // Subscription
         subscriptionType: subscription?.type ?? null,
 
-        // F. Interview (terbaru)
+        // Interview
         interviewStatus: latestInterview?.status ?? null,
       };
     }),

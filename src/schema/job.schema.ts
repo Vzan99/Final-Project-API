@@ -9,7 +9,7 @@ export const createJobSchema = z.object({
     message: "Invalid date format",
   }),
   isRemote: z.boolean().default(false),
-  experienceLevel: z.string(), // Tetap string
+  experienceLevel: z.string(),
   employmentType: z.enum([
     "FULL_TIME",
     "PART_TIME",

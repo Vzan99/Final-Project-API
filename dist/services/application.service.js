@@ -79,26 +79,26 @@ function getApplicantsByJob(jobId_1, adminId_1) {
                 const subscription = (_a = user.subscriptions) === null || _a === void 0 ? void 0 : _a[0];
                 const latestInterview = (_b = user.interviewSchedules) === null || _b === void 0 ? void 0 : _b[0];
                 return {
-                    // A. Data Aplikasi
+                    // Data Aplikasi
                     id: app.id,
                     status: app.status,
                     expectedSalary: app.expectedSalary,
                     cvFile: app.cvFile,
                     coverLetter: app.coverLetter,
                     appliedAt: app.createdAt,
-                    // B. Data User
+                    // Data User
                     user: {
                         id: user.id,
                         name: user.name,
                         email: user.email,
                         profile: user.profile,
                     },
-                    // C. Data Pekerjaan
+                    // Data Pekerjaan
                     job: {
                         id: app.job.id,
                         title: app.job.title,
                     },
-                    // D. Data Pre-selection Test
+                    // Data Pre-selection Test
                     test: test
                         ? {
                             score: test.score,
@@ -106,9 +106,9 @@ function getApplicantsByJob(jobId_1, adminId_1) {
                             submittedAt: test.createdAt,
                         }
                         : null,
-                    // E. Subscription
+                    // Subscription
                     subscriptionType: (_c = subscription === null || subscription === void 0 ? void 0 : subscription.type) !== null && _c !== void 0 ? _c : null,
-                    // F. Interview (terbaru)
+                    // Interview
                     interviewStatus: (_d = latestInterview === null || latestInterview === void 0 ? void 0 : latestInterview.status) !== null && _d !== void 0 ? _d : null,
                 };
             }),

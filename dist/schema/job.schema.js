@@ -11,7 +11,7 @@ exports.createJobSchema = zod_1.z.object({
         message: "Invalid date format",
     }),
     isRemote: zod_1.z.boolean().default(false),
-    experienceLevel: zod_1.z.string(), // Tetap string
+    experienceLevel: zod_1.z.string(),
     employmentType: zod_1.z.enum([
         "FULL_TIME",
         "PART_TIME",

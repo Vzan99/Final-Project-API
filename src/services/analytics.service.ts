@@ -44,7 +44,7 @@ export async function getUserDemographics() {
     const g = profile.gender || "Unknown";
     demographics.gender[g] = (demographics.gender[g] || 0) + 1;
 
-    // Location count (gunakan address sebagai lokasi kasar)
+    // Location count
     const loc = profile.address || "Unknown";
     demographics.location[loc] = (demographics.location[loc] || 0) + 1;
   }
@@ -56,7 +56,7 @@ export async function getSalaryTrends() {
   const applications = await prisma.application.findMany({
     where: {
       status: {
-        in: ["REVIEWED", "INTERVIEW", "ACCEPTED"], // opsional filter, tergantung kebutuhan
+        in: ["REVIEWED", "INTERVIEW", "ACCEPTED"],
       },
     },
     select: {
@@ -123,7 +123,6 @@ export async function getApplicantInterests() {
     totalApplications: count,
   }));
 
-  // Optional: sort by most popular
   result.sort((a, b) => b.totalApplications - a.totalApplications);
 
   return result;
@@ -151,7 +150,7 @@ export async function getAnalyticsOverview() {
     },
   });
 
-  // (Opsional) Rata-rata skor skill assessment
+  // Rata-rata skor skill assessment
   const skillAssessmentAvg = await prisma.userAssessment.aggregate({
     _avg: {
       score: true,
