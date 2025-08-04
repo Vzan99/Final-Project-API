@@ -1,7 +1,8 @@
+import { Response as ExpressResponse } from "express";
 import prisma from "../lib/prisma";
 import { v4 as uuidv4 } from "uuid";
 import QRCode from "qrcode";
-import { generateAndSaveCertificatePdf } from "../utils/generateCertificatePDF";
+import { streamCertificatePdf } from "../utils/PDFhelper";
 
 type Question = {
   question: string;
@@ -22,13 +23,18 @@ export const createAssessment = async (
   input: AssessmentInput,
   developerId: string
 ) => {
+  const questionsWithId = input.questions.map((q) => ({
+    ...q,
+    id: uuidv4(),
+  }));
+
   return prisma.skillAssessment.create({
     data: {
       name: input.name,
       description: input.description,
       passingScore: input.passingScore ?? 75,
       timeLimit: input.timeLimit ?? 30,
-      questions: input.questions,
+      questions: questionsWithId,
       developerId,
     },
   });
@@ -102,19 +108,40 @@ export const submitAssessment = async (
   userId: string,
   userAnswers: string[]
 ) => {
-  const existing = await prisma.userAssessment.findFirst({
-    where: { userId, assessmentId },
-  });
-  if (existing) throw new Error("Assessment sudah pernah dikerjakan");
+  const [assessment, subscription, attemptCount] = await Promise.all([
+    prisma.skillAssessment.findUnique({ where: { id: assessmentId } }),
+    prisma.subscription.findFirst({
+      where: {
+        userId,
+        isApproved: true,
+        paymentStatus: "PAID",
+      },
+      select: { type: true },
+    }),
+    prisma.userAssessment.count({
+      where: { userId, assessmentId },
+    }),
+  ]);
 
-  const assessment = await prisma.skillAssessment.findUnique({
-    where: { id: assessmentId },
-  });
   if (!assessment) throw new Error("Assessment not found");
 
   const questions = assessment.questions as Question[];
+
+  if (!questions || questions.length === 0)
+    throw new Error("Soal assessment belum tersedia.");
+
   if (userAnswers.length !== questions.length)
-    throw new Error("Jumlah jawaban tidak sesuai");
+    throw new Error("Jumlah jawaban tidak sesuai dengan jumlah soal.");
+
+  if (userAnswers.every((a) => a === ""))
+    throw new Error("Jawaban kosong tidak bisa disubmit.");
+
+  const maxAllowed =
+    subscription?.type?.toUpperCase() === "PROFESSIONAL" ? Infinity : 2;
+
+  if (attemptCount >= maxAllowed) {
+    throw new Error("Batas maksimum percobaan assessment telah tercapai.");
+  }
 
   let correct = 0;
   questions.forEach((q, idx) => {
@@ -134,30 +161,6 @@ export const submitAssessment = async (
       badge: passed ? assessment.name : "",
     },
   });
-
-  if (passed) {
-    const verificationCode = uuidv4();
-    const feUrl = process.env.FE_URL || "http://localhost:3000";
-    const qrCodeDataUrl = await QRCode.toDataURL(
-      `${feUrl}/certificates/verify/${verificationCode}`
-    );
-
-    const certificate = await prisma.certificate.create({
-      data: {
-        userId,
-        assessmentId,
-        verificationCode,
-        certificateUrl: `${feUrl}/certificates/${result.id}.pdf`,
-        qrCodeUrl: qrCodeDataUrl,
-      },
-      include: {
-        user: { select: { name: true } },
-        assessment: { select: { name: true } },
-      },
-    });
-
-    await generateAndSaveCertificatePdf({ certificate });
-  }
 
   return result;
 };
@@ -200,20 +203,95 @@ export const getUserAssessmentResult = async (
   userId: string,
   assessmentId: string
 ) => {
-  const result = await prisma.userAssessment.findFirst({
-    where: { userId, assessmentId },
-  });
-  if (!result) return null;
+  const [assessment, result, cert, attemptCount, subscription] =
+    await Promise.all([
+      prisma.skillAssessment.findUnique({
+        where: { id: assessmentId },
+        select: { name: true },
+      }),
+      prisma.userAssessment.findFirst({
+        where: { userId, assessmentId },
+      }),
+      prisma.certificate.findFirst({
+        where: { userId, assessmentId },
+      }),
+      prisma.userAssessment.count({
+        where: { userId, assessmentId },
+      }),
+      prisma.subscription.findFirst({
+        where: {
+          userId,
+          isApproved: true,
+          paymentStatus: "PAID",
+        },
+        select: { type: true },
+      }),
+    ]);
 
-  const cert = await prisma.certificate.findFirst({
-    where: { userId, assessmentId },
-  });
+  const maxAllowedAttempts =
+    subscription?.type?.toUpperCase() === "PROFESSIONAL" ? Infinity : 2;
 
   return {
-    id: result.id,
-    score: result.score,
-    passed: result.passed,
-    badge: result.badge,
+    id: result?.id ?? null,
+    score: result?.score ?? null,
+    passed: result?.passed ?? null,
+    badge: result?.badge ?? null,
     certificateId: cert?.id ?? null,
+    totalAttempts: attemptCount,
+    maxAllowedAttempts,
+    assessmentTitle: assessment?.name ?? null,
+  };
+};
+
+export const streamAssessmentCertificate = async (
+  userId: string,
+  certificateId: string,
+  res: ExpressResponse
+) => {
+  const certificate = await prisma.certificate.findFirst({
+    where: { id: certificateId, userId },
+    include: {
+      user: { select: { name: true } },
+      assessment: { select: { name: true } },
+    },
+  });
+
+  if (!certificate) throw new Error("Certificate not found");
+
+  await streamCertificatePdf({
+    certificate: {
+      user: certificate.user,
+      assessment: certificate.assessment,
+      createdAt: certificate.issuedAt,
+      code: certificate.verificationCode,
+    },
+    res,
+  });
+};
+
+export const verifyCertificate = async (code: string) => {
+  const certificate = await prisma.certificate.findFirst({
+    where: { verificationCode: code },
+    include: {
+      user: {
+        select: { name: true, email: true },
+      },
+      assessment: {
+        select: { name: true },
+      },
+    },
+  });
+
+  if (!certificate) return null;
+
+  const baseUrl = process.env.FE_URL || "http://localhost:3000";
+
+  return {
+    id: certificate.id,
+    issuedAt: certificate.issuedAt,
+    user: certificate.user,
+    assessment: certificate.assessment,
+    qrCodeUrl: `${baseUrl}/certificates/verify/${code}`,
+    certificateUrl: `${baseUrl}/api/preview/certificates/${certificate.id}`,
   };
 };

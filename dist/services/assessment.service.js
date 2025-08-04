@@ -12,21 +12,21 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUserAssessmentResult = exports.getUserAssessmentResults = exports.submitAssessment = exports.getAssessmentDetail = exports.getAllAssessments = exports.deleteAssessment = exports.updateAssessment = exports.getDeveloperAssessments = exports.createAssessment = void 0;
+exports.verifyCertificate = exports.streamAssessmentCertificate = exports.getUserAssessmentResult = exports.getUserAssessmentResults = exports.submitAssessment = exports.getAssessmentDetail = exports.getAllAssessments = exports.deleteAssessment = exports.updateAssessment = exports.getDeveloperAssessments = exports.createAssessment = void 0;
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const uuid_1 = require("uuid");
-const qrcode_1 = __importDefault(require("qrcode"));
-const generateCertificatePDF_1 = require("../utils/generateCertificatePDF");
+const PDFhelper_1 = require("../utils/PDFhelper");
 // ─── DEVELOPER ─────────────────────────────
 const createAssessment = (input, developerId) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
+    const questionsWithId = input.questions.map((q) => (Object.assign(Object.assign({}, q), { id: (0, uuid_1.v4)() })));
     return prisma_1.default.skillAssessment.create({
         data: {
             name: input.name,
             description: input.description,
             passingScore: (_a = input.passingScore) !== null && _a !== void 0 ? _a : 75,
             timeLimit: (_b = input.timeLimit) !== null && _b !== void 0 ? _b : 30,
-            questions: input.questions,
+            questions: questionsWithId,
             developerId,
         },
     });
@@ -87,27 +87,41 @@ const getAssessmentDetail = (assessmentId) => __awaiter(void 0, void 0, void 0, 
 });
 exports.getAssessmentDetail = getAssessmentDetail;
 const submitAssessment = (assessmentId, userId, userAnswers) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const existing = yield prisma_1.default.userAssessment.findFirst({
-        where: { userId, assessmentId },
-    });
-    if (existing)
-        throw new Error("Assessment sudah pernah dikerjakan");
-    const assessment = yield prisma_1.default.skillAssessment.findUnique({
-        where: { id: assessmentId },
-    });
+    var _a, _b;
+    const [assessment, subscription, attemptCount] = yield Promise.all([
+        prisma_1.default.skillAssessment.findUnique({ where: { id: assessmentId } }),
+        prisma_1.default.subscription.findFirst({
+            where: {
+                userId,
+                isApproved: true,
+                paymentStatus: "PAID",
+            },
+            select: { type: true },
+        }),
+        prisma_1.default.userAssessment.count({
+            where: { userId, assessmentId },
+        }),
+    ]);
     if (!assessment)
         throw new Error("Assessment not found");
     const questions = assessment.questions;
+    if (!questions || questions.length === 0)
+        throw new Error("Soal assessment belum tersedia.");
     if (userAnswers.length !== questions.length)
-        throw new Error("Jumlah jawaban tidak sesuai");
+        throw new Error("Jumlah jawaban tidak sesuai dengan jumlah soal.");
+    if (userAnswers.every((a) => a === ""))
+        throw new Error("Jawaban kosong tidak bisa disubmit.");
+    const maxAllowed = ((_a = subscription === null || subscription === void 0 ? void 0 : subscription.type) === null || _a === void 0 ? void 0 : _a.toUpperCase()) === "PROFESSIONAL" ? Infinity : 2;
+    if (attemptCount >= maxAllowed) {
+        throw new Error("Batas maksimum percobaan assessment telah tercapai.");
+    }
     let correct = 0;
     questions.forEach((q, idx) => {
         if (userAnswers[idx] === q.options[q.answer])
             correct++;
     });
     const score = Math.round((correct / questions.length) * 100);
-    const passed = score >= ((_a = assessment.passingScore) !== null && _a !== void 0 ? _a : 75);
+    const passed = score >= ((_b = assessment.passingScore) !== null && _b !== void 0 ? _b : 75);
     const result = yield prisma_1.default.userAssessment.create({
         data: {
             userId,
@@ -118,25 +132,6 @@ const submitAssessment = (assessmentId, userId, userAnswers) => __awaiter(void 0
             badge: passed ? assessment.name : "",
         },
     });
-    if (passed) {
-        const verificationCode = (0, uuid_1.v4)();
-        const feUrl = process.env.FE_URL || "http://localhost:3000";
-        const qrCodeDataUrl = yield qrcode_1.default.toDataURL(`${feUrl}/certificates/verify/${verificationCode}`);
-        const certificate = yield prisma_1.default.certificate.create({
-            data: {
-                userId,
-                assessmentId,
-                verificationCode,
-                certificateUrl: `${feUrl}/certificates/${result.id}.pdf`,
-                qrCodeUrl: qrCodeDataUrl,
-            },
-            include: {
-                user: { select: { name: true } },
-                assessment: { select: { name: true } },
-            },
-        });
-        yield (0, generateCertificatePDF_1.generateAndSaveCertificatePdf)({ certificate });
-    }
     return result;
 });
 exports.submitAssessment = submitAssessment;
@@ -174,21 +169,86 @@ const getUserAssessmentResults = (userId) => __awaiter(void 0, void 0, void 0, f
 });
 exports.getUserAssessmentResults = getUserAssessmentResults;
 const getUserAssessmentResult = (userId, assessmentId) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const result = yield prisma_1.default.userAssessment.findFirst({
-        where: { userId, assessmentId },
-    });
-    if (!result)
-        return null;
-    const cert = yield prisma_1.default.certificate.findFirst({
-        where: { userId, assessmentId },
-    });
+    var _a, _b, _c, _d, _e, _f, _g;
+    const [assessment, result, cert, attemptCount, subscription] = yield Promise.all([
+        prisma_1.default.skillAssessment.findUnique({
+            where: { id: assessmentId },
+            select: { name: true },
+        }),
+        prisma_1.default.userAssessment.findFirst({
+            where: { userId, assessmentId },
+        }),
+        prisma_1.default.certificate.findFirst({
+            where: { userId, assessmentId },
+        }),
+        prisma_1.default.userAssessment.count({
+            where: { userId, assessmentId },
+        }),
+        prisma_1.default.subscription.findFirst({
+            where: {
+                userId,
+                isApproved: true,
+                paymentStatus: "PAID",
+            },
+            select: { type: true },
+        }),
+    ]);
+    const maxAllowedAttempts = ((_a = subscription === null || subscription === void 0 ? void 0 : subscription.type) === null || _a === void 0 ? void 0 : _a.toUpperCase()) === "PROFESSIONAL" ? Infinity : 2;
     return {
-        id: result.id,
-        score: result.score,
-        passed: result.passed,
-        badge: result.badge,
-        certificateId: (_a = cert === null || cert === void 0 ? void 0 : cert.id) !== null && _a !== void 0 ? _a : null,
+        id: (_b = result === null || result === void 0 ? void 0 : result.id) !== null && _b !== void 0 ? _b : null,
+        score: (_c = result === null || result === void 0 ? void 0 : result.score) !== null && _c !== void 0 ? _c : null,
+        passed: (_d = result === null || result === void 0 ? void 0 : result.passed) !== null && _d !== void 0 ? _d : null,
+        badge: (_e = result === null || result === void 0 ? void 0 : result.badge) !== null && _e !== void 0 ? _e : null,
+        certificateId: (_f = cert === null || cert === void 0 ? void 0 : cert.id) !== null && _f !== void 0 ? _f : null,
+        totalAttempts: attemptCount,
+        maxAllowedAttempts,
+        assessmentTitle: (_g = assessment === null || assessment === void 0 ? void 0 : assessment.name) !== null && _g !== void 0 ? _g : null,
     };
 });
 exports.getUserAssessmentResult = getUserAssessmentResult;
+const streamAssessmentCertificate = (userId, certificateId, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const certificate = yield prisma_1.default.certificate.findFirst({
+        where: { id: certificateId, userId },
+        include: {
+            user: { select: { name: true } },
+            assessment: { select: { name: true } },
+        },
+    });
+    if (!certificate)
+        throw new Error("Certificate not found");
+    yield (0, PDFhelper_1.streamCertificatePdf)({
+        certificate: {
+            user: certificate.user,
+            assessment: certificate.assessment,
+            createdAt: certificate.issuedAt,
+            code: certificate.verificationCode,
+        },
+        res,
+    });
+});
+exports.streamAssessmentCertificate = streamAssessmentCertificate;
+const verifyCertificate = (code) => __awaiter(void 0, void 0, void 0, function* () {
+    const certificate = yield prisma_1.default.certificate.findFirst({
+        where: { verificationCode: code },
+        include: {
+            user: {
+                select: { name: true, email: true },
+            },
+            assessment: {
+                select: { name: true },
+            },
+        },
+    });
+    if (!certificate)
+        return null;
+    const baseUrl = process.env.FE_URL || "http://localhost:3000";
+    return {
+        id: certificate.id,
+        issuedAt: certificate.issuedAt,
+        user: certificate.user,
+        assessment: certificate.assessment,
+        qrCodeUrl: `${baseUrl}/certificates/verify/${code}`,
+        certificateUrl: `${baseUrl}/api/preview/certificates/${certificate.id}`,
+    };
+});
+exports.verifyCertificate = verifyCertificate;

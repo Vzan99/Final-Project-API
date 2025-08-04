@@ -13,7 +13,6 @@ import subscriptionRouter from "./routers/subscription.router";
 import cvRouter from "./routers/cv.router";
 import AnalyticsRouter from "./routers/analytics.router";
 import assessmentRouter from "./routers/assessment.router";
-import certificateRouter from "./routers/certificate.router";
 import ReviewRouter from "./routers/review.router";
 import CompaniesRouter from "./routers/company.router";
 import { initSubscriptionCron } from "./lib/subscriptionCron";
@@ -35,7 +34,6 @@ app.use(
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(express.static("public"));
 
 // ─── Auth ────────────────────────────────────────────────
 app.use("/auth", AuthRouter);
@@ -58,9 +56,6 @@ app.use("/reviews", ReviewRouter);
 
 // ─── Skill Assessment ────────────────────────────────────
 app.use("/assessments", assessmentRouter);
-
-// ─── Certificate ──────────────────────────────────────────
-app.use("/certificates", certificateRouter);
 
 // ─── Analytics ────────────────────────────────────────────
 app.use("/analytics", AnalyticsRouter);

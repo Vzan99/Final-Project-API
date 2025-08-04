@@ -1,35 +1,43 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.assessmentParamSchema = exports.submitAssessmentSchema = exports.createAssessmentSchema = void 0;
+exports.assessmentParamSchema = exports.submitAssessmentSchema = exports.updateAssessmentSchema = exports.createAssessmentSchema = void 0;
 const zod_1 = require("zod");
 exports.createAssessmentSchema = zod_1.z.object({
-    name: zod_1.z.string().trim().min(3, "Nama assessment minimal 3 karakter"),
+    name: zod_1.z.string().min(3),
     description: zod_1.z.string().optional(),
-    passingScore: zod_1.z.number().min(0).max(100).optional(),
-    timeLimit: zod_1.z.number().min(1).optional(),
+    passingScore: zod_1.z.number().min(0).max(100),
+    timeLimit: zod_1.z.number().min(1),
     questions: zod_1.z
-        .array(zod_1.z
-        .object({
-        question: zod_1.z.string().trim().min(1, "Pertanyaan tidak boleh kosong"),
+        .array(zod_1.z.object({
+        question: zod_1.z.string().min(5),
         options: zod_1.z
-            .array(zod_1.z.string().trim().min(1, "Opsi tidak boleh kosong"))
-            .min(2, "Minimal harus ada 2 opsi")
+            .array(zod_1.z.string().min(1))
+            .min(2, "Minimal 2 opsi")
             .max(6, "Maksimal 6 opsi"),
-        answer: zod_1.z.number().min(0, "Jawaban harus berupa indeks >= 0"),
-    })
-        .superRefine((val, ctx) => {
-        if (val.answer >= val.options.length) {
-            ctx.addIssue({
-                code: "custom",
-                message: "Index jawaban harus kurang dari jumlah opsi",
-            });
-        }
+        answer: zod_1.z.number().min(0, "Answer must be valid"),
     }))
-        .min(1, "Minimal harus ada 1 pertanyaan"),
+        .min(1)
+        .superRefine((qs, ctx) => {
+        qs.forEach((q, i) => {
+            if (q.answer >= q.options.length) {
+                ctx.addIssue({
+                    code: zod_1.z.ZodIssueCode.custom,
+                    message: "Index jawaban di luar batas opsi",
+                    path: [i, "answer"],
+                });
+            }
+        });
+    }),
 });
+exports.updateAssessmentSchema = exports.createAssessmentSchema.partial();
 exports.submitAssessmentSchema = zod_1.z.object({
-    answers: zod_1.z.array(zod_1.z.string().min(1)).min(1),
+    answers: zod_1.z
+        .array(zod_1.z.object({
+        questionId: zod_1.z.string().uuid(),
+        selectedAnswer: zod_1.z.string(),
+    }))
+        .min(1),
 });
 exports.assessmentParamSchema = zod_1.z.object({
-    id: zod_1.z.string().uuid({ message: "Format UUID tidak valid" }),
+    id: zod_1.z.string().uuid({ message: "Invalid assessment ID format" }),
 });

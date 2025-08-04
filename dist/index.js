@@ -18,7 +18,6 @@ const subscription_router_1 = __importDefault(require("./routers/subscription.ro
 const cv_router_1 = __importDefault(require("./routers/cv.router"));
 const analytics_router_1 = __importDefault(require("./routers/analytics.router"));
 const assessment_router_1 = __importDefault(require("./routers/assessment.router"));
-const certificate_router_1 = __importDefault(require("./routers/certificate.router"));
 const review_router_1 = __importDefault(require("./routers/review.router"));
 const company_router_1 = __importDefault(require("./routers/company.router"));
 const subscriptionCron_1 = require("./lib/subscriptionCron");
@@ -34,7 +33,6 @@ app.use((0, cors_1.default)({
 }));
 app.use(express_1.default.json());
 app.use((0, cookie_parser_1.default)());
-app.use(express_1.default.static("public"));
 // ─── Auth ────────────────────────────────────────────────
 app.use("/auth", auth_router_1.default);
 // ─── User Profile & CV ───────────────────────────────────
@@ -51,8 +49,6 @@ app.use("/subscriptions", subscription_router_1.default);
 app.use("/reviews", review_router_1.default);
 // ─── Skill Assessment ────────────────────────────────────
 app.use("/assessments", assessment_router_1.default);
-// ─── Certificate ──────────────────────────────────────────
-app.use("/certificates", certificate_router_1.default);
 // ─── Analytics ────────────────────────────────────────────
 app.use("/analytics", analytics_router_1.default);
 // ─── Companies ────────────────────────────────────────────
