@@ -16,6 +16,7 @@ Proyek ini dikerjakan oleh 2 developer dengan pembagian fitur sesuai role: **Use
 - **Frontend (Next.js, Tailwind, Redux)**  
   [Final-Project-Web](https://github.com/Vzan99/Final-Project-Web)
 
+
 ---
 
 ## Fitur Utama
@@ -100,4 +101,5 @@ Proyek ini dikerjakan oleh 2 developer dengan pembagian fitur sesuai role: **Use
 
 > Silakan lihat petunjuk instalasi masing-masing di repository:
 > - [API Setup](https://github.com/Vzan99/Final-Project-API#readme)
-> - [Frontend Setup](https://github.com/Vzan99/Final-Project-Web#readme)
+> - [Web Setup](https://github.com/Vzan99/Final-Project-Web#readme)
+> - [Vercel](https://precise-web-ochre.vercel.app/)
