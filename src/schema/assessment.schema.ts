@@ -16,6 +16,7 @@ export const createAssessmentSchema = z.object({
         answer: z.number().min(0, "Answer must be valid"),
       })
     )
+    .min(25, "Jumlah soal harus 25")
     .min(1)
     .superRefine((qs, ctx) => {
       qs.forEach((q, i) => {

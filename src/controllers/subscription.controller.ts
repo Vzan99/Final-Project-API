@@ -284,3 +284,20 @@ export const midtransWebhookHandler = asyncHandler(async (req, res) => {
 
   return res.status(200).json({ message: "Webhook handled" });
 });
+
+export const rejectSubscriptionHandler = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const subscription = await prisma.subscription.update({
+    where: { id },
+    data: {
+      isApproved: false,
+      paymentStatus: "PENDING",
+    },
+  });
+
+  res.status(200).json({
+    message: "Subscription rejected",
+    data: subscription,
+  });
+});

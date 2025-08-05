@@ -16,6 +16,7 @@ exports.createAssessmentSchema = zod_1.z.object({
             .max(6, "Maksimal 6 opsi"),
         answer: zod_1.z.number().min(0, "Answer must be valid"),
     }))
+        .min(25, "Jumlah soal harus 25")
         .min(1)
         .superRefine((qs, ctx) => {
         qs.forEach((q, i) => {

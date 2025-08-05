@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.verifyCertificate = exports.streamAssessmentCertificate = exports.getUserAssessmentResult = exports.getUserAssessmentResults = exports.submitAssessment = exports.getAssessmentDetail = exports.getAllAssessments = exports.deleteAssessment = exports.updateAssessment = exports.getDeveloperAssessments = exports.createAssessment = void 0;
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const uuid_1 = require("uuid");
+const qrcode_1 = __importDefault(require("qrcode"));
 const PDFhelper_1 = require("../utils/PDFhelper");
 // ─── DEVELOPER ─────────────────────────────
 const createAssessment = (input, developerId) => __awaiter(void 0, void 0, void 0, function* () {
@@ -88,7 +89,7 @@ const getAssessmentDetail = (assessmentId) => __awaiter(void 0, void 0, void 0, 
 exports.getAssessmentDetail = getAssessmentDetail;
 const submitAssessment = (assessmentId, userId, userAnswers) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
-    const [assessment, subscription, attemptCount] = yield Promise.all([
+    const [assessment, subscription, attemptCount, hasPassedBefore] = yield Promise.all([
         prisma_1.default.skillAssessment.findUnique({ where: { id: assessmentId } }),
         prisma_1.default.subscription.findFirst({
             where: {
@@ -101,25 +102,37 @@ const submitAssessment = (assessmentId, userId, userAnswers) => __awaiter(void 0
         prisma_1.default.userAssessment.count({
             where: { userId, assessmentId },
         }),
+        prisma_1.default.userAssessment.findFirst({
+            where: { userId, assessmentId, passed: true },
+        }),
     ]);
     if (!assessment)
         throw new Error("Assessment not found");
     const questions = assessment.questions;
     if (!questions || questions.length === 0)
         throw new Error("Soal assessment belum tersedia.");
+    if (questions.length !== 25)
+        throw new Error("Assessment harus terdiri dari 25 soal.");
     if (userAnswers.length !== questions.length)
         throw new Error("Jumlah jawaban tidak sesuai dengan jumlah soal.");
-    if (userAnswers.every((a) => a === ""))
+    if (userAnswers.every((a) => a.selectedAnswer === ""))
         throw new Error("Jawaban kosong tidak bisa disubmit.");
     const maxAllowed = ((_a = subscription === null || subscription === void 0 ? void 0 : subscription.type) === null || _a === void 0 ? void 0 : _a.toUpperCase()) === "PROFESSIONAL" ? Infinity : 2;
     if (attemptCount >= maxAllowed) {
         throw new Error("Batas maksimum percobaan assessment telah tercapai.");
     }
+    if (hasPassedBefore) {
+        throw new Error("Kamu sudah lulus assessment ini.");
+    }
+    // Mapping soal berdasarkan ID
+    const questionMap = new Map();
+    questions.forEach((q) => questionMap.set(q.id, q));
     let correct = 0;
-    questions.forEach((q, idx) => {
-        if (userAnswers[idx] === q.options[q.answer])
+    for (const ans of userAnswers) {
+        const q = questionMap.get(ans.questionId);
+        if (q && q.options[q.answer] === ans.selectedAnswer)
             correct++;
-    });
+    }
     const score = Math.round((correct / questions.length) * 100);
     const passed = score >= ((_b = assessment.passingScore) !== null && _b !== void 0 ? _b : 75);
     const result = yield prisma_1.default.userAssessment.create({
@@ -128,10 +141,26 @@ const submitAssessment = (assessmentId, userId, userAnswers) => __awaiter(void 0
             assessmentId,
             score,
             passed,
-            answers: userAnswers,
             badge: passed ? assessment.name : "",
+            answers: userAnswers,
         },
     });
+    // Jika lulus, generate sertifikat otomatis
+    if (passed) {
+        const code = (0, uuid_1.v4)();
+        const qrData = `${process.env.FE_URL || "http://localhost:3000"}/certificates/verify/${code}`;
+        const qrCodeImage = yield qrcode_1.default.toDataURL(qrData);
+        yield prisma_1.default.certificate.create({
+            data: {
+                userId,
+                assessmentId,
+                issuedAt: new Date(),
+                verificationCode: code,
+                qrCodeUrl: qrCodeImage,
+                certificateUrl: "", // opsional: bisa isi URL API download kalau mau
+            },
+        });
+    }
     return result;
 });
 exports.submitAssessment = submitAssessment;
