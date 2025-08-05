@@ -9,6 +9,7 @@ import {
   getSubscriptionHistory,
   createMidtransTransaction,
   midtransWebhookHandler,
+  rejectSubscriptionHandler,
 } from "../controllers/subscription.controller";
 import {
   VerifyToken,
@@ -35,6 +36,11 @@ router.patch(
   "/developer/:id/approve",
   ParamsValidator(subscriptionIdParamSchema),
   asyncHandler(approveSubscription)
+);
+router.patch(
+  "/developer/:id/reject",
+  ParamsValidator(subscriptionIdParamSchema),
+  asyncHandler(rejectSubscriptionHandler)
 );
 router.get("/developer/analytics", asyncHandler(getSubscriptionAnalytics));
 

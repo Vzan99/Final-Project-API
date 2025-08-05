@@ -17,6 +17,7 @@ const router = (0, express_1.Router)();
 router.use("/developer", auth_middleware_1.VerifyToken, auth_middleware_1.DeveloperGuard);
 router.get("/developer", (0, asyncHandler_1.asyncHandler)(subscription_controller_1.getSubscriptions));
 router.patch("/developer/:id/approve", (0, paramsValidator_middleware_1.default)(subscription_schema_1.subscriptionIdParamSchema), (0, asyncHandler_1.asyncHandler)(subscription_controller_1.approveSubscription));
+router.patch("/developer/:id/reject", (0, paramsValidator_middleware_1.default)(subscription_schema_1.subscriptionIdParamSchema), (0, asyncHandler_1.asyncHandler)(subscription_controller_1.rejectSubscriptionHandler));
 router.get("/developer/analytics", (0, asyncHandler_1.asyncHandler)(subscription_controller_1.getSubscriptionAnalytics));
 // User-only Routes
 router.get("/options", auth_middleware_1.VerifyToken, auth_middleware_1.UserGuard, (0, asyncHandler_1.asyncHandler)(subscription_controller_1.getSubscriptionOptions));

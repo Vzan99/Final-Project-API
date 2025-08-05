@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.midtransWebhookHandler = exports.createMidtransTransaction = exports.getSubscriptionHistory = exports.getMySubscription = exports.subscribe = exports.getSubscriptionOptions = exports.getSubscriptionAnalytics = exports.approveSubscription = exports.getSubscriptions = void 0;
+exports.rejectSubscriptionHandler = exports.midtransWebhookHandler = exports.createMidtransTransaction = exports.getSubscriptionHistory = exports.getMySubscription = exports.subscribe = exports.getSubscriptionOptions = exports.getSubscriptionAnalytics = exports.approveSubscription = exports.getSubscriptions = void 0;
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const cloudinary_1 = require("../utils/cloudinary");
 const dayjs_1 = __importDefault(require("dayjs"));
@@ -253,4 +253,18 @@ exports.midtransWebhookHandler = (0, asyncHandler_1.asyncHandler)((req, res) => 
         });
     }
     return res.status(200).json({ message: "Webhook handled" });
+}));
+exports.rejectSubscriptionHandler = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.params;
+    const subscription = yield prisma_1.default.subscription.update({
+        where: { id },
+        data: {
+            isApproved: false,
+            paymentStatus: "PENDING",
+        },
+    });
+    res.status(200).json({
+        message: "Subscription rejected",
+        data: subscription,
+    });
 }));

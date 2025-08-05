@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { streamCertificatePdf } from "../utils/PDFhelper";
 
 type Question = {
+  id: string;
   question: string;
   options: string[];
   answer: number;
@@ -106,34 +107,40 @@ export const getAssessmentDetail = async (assessmentId: string) => {
 export const submitAssessment = async (
   assessmentId: string,
   userId: string,
-  userAnswers: string[]
+  userAnswers: { questionId: string; selectedAnswer: string }[]
 ) => {
-  const [assessment, subscription, attemptCount] = await Promise.all([
-    prisma.skillAssessment.findUnique({ where: { id: assessmentId } }),
-    prisma.subscription.findFirst({
-      where: {
-        userId,
-        isApproved: true,
-        paymentStatus: "PAID",
-      },
-      select: { type: true },
-    }),
-    prisma.userAssessment.count({
-      where: { userId, assessmentId },
-    }),
-  ]);
+  const [assessment, subscription, attemptCount, hasPassedBefore] =
+    await Promise.all([
+      prisma.skillAssessment.findUnique({ where: { id: assessmentId } }),
+      prisma.subscription.findFirst({
+        where: {
+          userId,
+          isApproved: true,
+          paymentStatus: "PAID",
+        },
+        select: { type: true },
+      }),
+      prisma.userAssessment.count({
+        where: { userId, assessmentId },
+      }),
+      prisma.userAssessment.findFirst({
+        where: { userId, assessmentId, passed: true },
+      }),
+    ]);
 
   if (!assessment) throw new Error("Assessment not found");
 
   const questions = assessment.questions as Question[];
-
   if (!questions || questions.length === 0)
     throw new Error("Soal assessment belum tersedia.");
+
+  if (questions.length !== 25)
+    throw new Error("Assessment harus terdiri dari 25 soal.");
 
   if (userAnswers.length !== questions.length)
     throw new Error("Jumlah jawaban tidak sesuai dengan jumlah soal.");
 
-  if (userAnswers.every((a) => a === ""))
+  if (userAnswers.every((a) => a.selectedAnswer === ""))
     throw new Error("Jawaban kosong tidak bisa disubmit.");
 
   const maxAllowed =
@@ -143,10 +150,19 @@ export const submitAssessment = async (
     throw new Error("Batas maksimum percobaan assessment telah tercapai.");
   }
 
+  if (hasPassedBefore) {
+    throw new Error("Kamu sudah lulus assessment ini.");
+  }
+
+  // Mapping soal berdasarkan ID
+  const questionMap = new Map<string, Question>();
+  questions.forEach((q) => questionMap.set(q.id, q));
+
   let correct = 0;
-  questions.forEach((q, idx) => {
-    if (userAnswers[idx] === q.options[q.answer]) correct++;
-  });
+  for (const ans of userAnswers) {
+    const q = questionMap.get(ans.questionId);
+    if (q && q.options[q.answer] === ans.selectedAnswer) correct++;
+  }
 
   const score = Math.round((correct / questions.length) * 100);
   const passed = score >= (assessment.passingScore ?? 75);
@@ -157,10 +173,30 @@ export const submitAssessment = async (
       assessmentId,
       score,
       passed,
-      answers: userAnswers,
       badge: passed ? assessment.name : "",
+      answers: userAnswers,
     },
   });
+
+  // Jika lulus, generate sertifikat otomatis
+  if (passed) {
+    const code = uuidv4();
+    const qrData = `${
+      process.env.FE_URL || "http://localhost:3000"
+    }/certificates/verify/${code}`;
+    const qrCodeImage = await QRCode.toDataURL(qrData);
+
+    await prisma.certificate.create({
+      data: {
+        userId,
+        assessmentId,
+        issuedAt: new Date(),
+        verificationCode: code,
+        qrCodeUrl: qrCodeImage,
+        certificateUrl: "", // opsional: bisa isi URL API download kalau mau
+      },
+    });
+  }
 
   return result;
 };
